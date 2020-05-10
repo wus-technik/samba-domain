@@ -7,11 +7,9 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get upgrade -y \
     # Install all required packages \
-    && apt-get install -y pkg-config attr acl samba smbclient ldap-utils winbind libnss-winbind libpam-winbind krb5-user krb5-kdc supervisor \
+    && apt-get remove ntpdate apt-get install -y ntp pkg-config attr acl samba smbclient ldap-utils winbind libnss-winbind libpam-winbind krb5-user krb5-kdc supervisor \
     # line below is for multi-site config (ping is for testing later) \
     && apt-get install -y openvpn inetutils-ping \
-	# ntp \
-    && apt-get install -y ntpd \
     # Set up script \
     #&& chmod 755 init.sh \
     # cleanup \

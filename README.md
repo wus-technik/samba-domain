@@ -13,6 +13,8 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 * `INSECURELDAP` defaults to `false`. When set to true, it removes the secure LDAP requirement. While this is not recommended for production it is required for some LDAP tools. You can remove it later from the smb.conf file stored in the config directory.
 * `MULTISITE` defaults to `false` and tells the container to connect to an OpenVPN site via an ovpn file with no password. For instance, if you have two locations where you run your domain controllers, they need to be able to interact. The VPN allows them to do that.
 * `NOCOMPLEXITY` defaults to `false`. When set to `true` it removes password complexity requirements including `complexity, history-length, min-pwd-age, max-pwd-age`
+* `TLS` defaults to `false`. When set to `true` it creates certificate files for ldaps`
+* `LOGS` defaults to `false`. When set to `true` it creates log file in /var/log/sambe for kerberos and samba. Add a mapping`
 
 ## Volumes for quick start
 
@@ -225,6 +227,7 @@ docker run -t -i \
  -p 192.168.3.222:1024-1044:1024-1044 \
  -p 192.168.3.222:3268-3269:3268-3269 \
  -v /etc/localtime:/etc/localtime:ro \
+ -v /var/log/samba:/var/log/samba:ro \
  -v /data/docker/containers/samba/data/:/var/lib/samba \
  -v /data/docker/containers/samba/config/samba:/etc/samba/external \
  --dns-search corp.example.com \
