@@ -14,6 +14,8 @@ appSetup () {
 	INSECURELDAP=${INSECURELDAP:-false}
 	DNSFORWARDER=${DNSFORWARDER:-NONE}
 	HOSTIP=${HOSTIP:-NONE}
+	TLS=${TLS:-false}
+	LOGS=${LOGS:-false}
 	
 	LDOMAIN=${DOMAIN,,}
 	UDOMAIN=${DOMAIN^^}
@@ -40,6 +42,12 @@ appSetup () {
 	echo "    dns_lookup_realm = false" >> /etc/krb5.conf
 	echo "    dns_lookup_kdc = true" >> /etc/krb5.conf
 	echo "    default_realm = ${UDOMAIN}" >> /etc/krb5.conf
+	if [[ ${LOGS,,} == "true" ]]; then
+	echo "[logging]"  >> /etc/krb5.conf
+	echo "    default = FILE:/var/log/samba/krb5libs.log"  >> /etc/krb5.conf
+	echo "    kdc = FILE:/var/log/samba/krb5kdc.log"  >> /etc/krb5.conf
+	echo "    admin_server = FILE:/var/log/samba/kadmind.log"  >> /etc/krb5.conf
+	fi
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
 	if [[ ! -f /etc/samba/external/smb.conf ]]; then
 		mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
@@ -69,15 +77,32 @@ appSetup () {
 				\\\tdns forwarder = ${DNSFORWARDER}\
 				" /etc/samba/smb.conf
 		fi
+		if [[ ${TLS,,} == "true" ]]; then
+		sed -i "/\[global\]/a \
+			\\\ttls enabled  = yes\\n\
+			tls keyfile  = /etc/samba/tls/key.pem\\n\
+			tls certfile = /etc/samba/tls/crt.pem\\n\
+			tls cafile   = /etc/samba/tls/chain.pem\\n\
+			tls crlfile   = /etc/samba/tls/crl.pem\\n\
+			tls verify peer = ca_and_name\\n\
+		" /etc/samba/smb.conf
+		fi
+		if [[ ${LOGS,,} == "true" ]]; then
+			sed -i "/\[global\]/a \
+				\\\tlog file = /var/log/samba/%m.log\\n\
+				max log size = 10000\\n\
+				log level = 3\\n\
+				" /etc/samba/smb.conf
+		fi
 		if [[ ${INSECURELDAP,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
 				\\\tldap server require strong auth = no\
 				" /etc/samba/smb.conf
 		fi
 		# Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
-		cp /etc/samba/smb.conf /etc/samba/external/smb.conf
+		cp -f /etc/samba/smb.conf /etc/samba/external/smb.conf
 	else
-		cp /etc/samba/external/smb.conf /etc/samba/smb.conf
+		cp -f /etc/samba/external/smb.conf /etc/samba/smb.conf
 	fi
         
 	# Set up supervisor
