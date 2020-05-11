@@ -16,6 +16,7 @@ appSetup () {
 	HOSTIP=${HOSTIP:-NONE}
 	TLS=${TLS:-false}
 	LOGS=${LOGS:-false}
+	ADLoginOnUnix=${ADLoginOnUnix:-false}
 	
 	LDOMAIN=${DOMAIN,,}
 	UDOMAIN=${DOMAIN^^}
@@ -71,7 +72,7 @@ appSetup () {
 			wins support = yes\\n\
 			template shell = /bin/bash\\n\
 			winbind nss info = rfc2307\\n\
-			" /etc/samba/smb.conf
+		" /etc/samba/smb.conf
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
 				\\\tdns forwarder = ${DNSFORWARDER}\
@@ -92,13 +93,33 @@ appSetup () {
 				\\\tlog file = /var/log/samba/%m.log\\n\
 				max log size = 10000\\n\
 				log level = 3\\n\
-				" /etc/samba/smb.conf
+			" /etc/samba/smb.conf
 		fi
 		if [[ ${INSECURELDAP,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
 				\\\tldap server require strong auth = no\
-				" /etc/samba/smb.conf
+			" /etc/samba/smb.conf
 		fi
+		if [[ ${ADLoginOnUnix,,} == "true" ]]
+		winbind enum users = yes
+        winbind enum groups = yes
+		# nsswitch anpassen
+		fi
+
+		#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
+		#https://github.com/Supervisor/supervisor/issues/717
+		sed -i "/\[unix_http_server\]/a \
+			\\\tusername=dummy\\n\
+			password=dummy\\n\
+		" /etc/supervisor/supervisord.conf
+		sed -i "/\[supervisorctl\]/a \
+			\\\tusername = dummy\\n\
+			password = dummy\\n\
+		" /etc/supervisor/supervisord.conf		
+        #Drop privileges
+		#https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
+         
+         
 		# Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 		cp -f /etc/samba/smb.conf /etc/samba/external/smb.conf
 	else
@@ -108,6 +129,8 @@ appSetup () {
 	# Set up supervisor
 	echo "[supervisord]" > /etc/supervisor/conf.d/supervisord.conf
 	echo "nodaemon=true" >> /etc/supervisor/conf.d/supervisord.conf
+	#Suppress CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+	echo "user=root" >> /etc/supervisor/conf.d/supervisord.conf
 	echo "" >> /etc/supervisor/conf.d/supervisord.conf
 	echo "[program:samba]" >> /etc/supervisor/conf.d/supervisord.conf
 	echo "command=/usr/sbin/samba -i" >> /etc/supervisor/conf.d/supervisord.conf
