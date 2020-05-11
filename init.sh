@@ -109,17 +109,7 @@ appSetup () {
                 winbind enum groups = yes
 		# nsswitch anpassen
 		fi
-
-		#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
-		#https://github.com/Supervisor/supervisor/issues/717
-		sed -i "/\[unix_http_server\]/a \
-			\\\tusername=dummy\\n\
-			password=dummy\\n\
-		" /etc/supervisor/supervisord.conf
-		sed -i "/\[supervisorctl\]/a \
-			\\\tusername = dummy\\n\
-			password = dummy\\n\
-		" /etc/supervisor/supervisord.conf		
+	
         #Drop privileges
 		#https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
          
@@ -129,10 +119,9 @@ appSetup () {
 	else
 		cp -f /etc/samba/external/smb.conf /etc/samba/smb.conf
 	fi
-        
-        #Create supervisor
-        rm /etc/supervisor/conf.d/supervisord.conf && touch /etc/supervisor/conf.d/supervisord.conf
+  
 	# Set up supervisor
+	touch /etc/supervisor/conf.d/supervisord.conf
 	{
 	echo "[supervisord]"
 	echo "nodaemon=true"
@@ -142,8 +131,20 @@ appSetup () {
 	echo "[program:samba]"
 	echo "command=/usr/sbin/samba -i"
 	echo "[program:ntpd]"
-	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"	        
+	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"
 	} >> /etc/supervisor/conf.d/supervisord.conf
+	
+	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
+	#https://github.com/Supervisor/supervisor/issues/717
+	sed -i "/\[unix_http_server\]/a \
+		\\\tusername=dummy\\n\
+		password=dummy\\n\
+	" /etc/supervisor/supervisord.conf
+	sed -i "/\[supervisorctl\]/a \
+		\\\tusername = dummy\\n\
+		password = dummy\\n\
+	" /etc/supervisor/supervisord.conf	
+
 	if [[ ${MULTISITE,,} == "true" ]]; then
 		if [[ -n $VPNPID ]]; then
 			kill $VPNPID
@@ -156,7 +157,7 @@ appSetup () {
 	fi
 
 	# Set up ntpd
-	rm /etc/ntpd.conf && touch /etc/ntpd.conf
+	touch /etc/ntpd.conf
 	{
 	echo "server 127.127.1.0"
 	echo "fudge  127.127.1.0 stratum 10"
