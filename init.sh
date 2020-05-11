@@ -39,27 +39,31 @@ appSetup () {
 
 	# Set up samba
 	mv /etc/krb5.conf /etc/krb5.conf.orig
+	{
 	echo "[libdefaults]" > /etc/krb5.conf
-	echo "    dns_lookup_realm = false" >> /etc/krb5.conf
-	echo "    dns_lookup_kdc = true" >> /etc/krb5.conf
-	echo "    default_realm = ${UDOMAIN}" >> /etc/krb5.conf
+	echo "    dns_lookup_realm = false"
+	echo "    dns_lookup_kdc = true"
+	echo "    default_realm = ${UDOMAIN}"
+	} >> /etc/krb5.conf
 	if [[ ${LOGS,,} == "true" ]]; then
+	{
 	echo "[logging]"  >> /etc/krb5.conf
-	echo "    default = FILE:/var/log/samba/krb5libs.log"  >> /etc/krb5.conf
-	echo "    kdc = FILE:/var/log/samba/krb5kdc.log"  >> /etc/krb5.conf
-	echo "    admin_server = FILE:/var/log/samba/kadmind.log"  >> /etc/krb5.conf
+	echo "    default = FILE:/var/log/samba/krb5libs.log"
+	echo "    kdc = FILE:/var/log/samba/krb5kdc.log"
+	echo "    admin_server = FILE:/var/log/samba/kadmind.log" 	        
+	} >> /etc/krb5.conf
 	fi
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
 	if [[ ! -f /etc/samba/external/smb.conf ]]; then
 		mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
 		if [[ ${JOIN,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
-				samba-tool domain join ${LDOMAIN} DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL
+				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL
 			else
-				samba-tool domain join ${LDOMAIN} DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL --site=${JOINSITE}
+				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL --site="${JOINSITE}"
 			fi
 		else
-			samba-tool domain provision --use-rfc2307 --domain=${URDOMAIN} --realm=${UDOMAIN} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass=${DOMAINPASS} ${HOSTIP_OPTION}
+			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
 				samba-tool domain passwordsettings set --complexity=off
 				samba-tool domain passwordsettings set --history-length=0
@@ -102,7 +106,7 @@ appSetup () {
 		fi
 		if [[ ${ADLoginOnUnix,,} == "true" ]]; then
 		winbind enum users = yes
-        winbind enum groups = yes
+                winbind enum groups = yes
 		# nsswitch anpassen
 		fi
 
@@ -126,39 +130,49 @@ appSetup () {
 		cp -f /etc/samba/external/smb.conf /etc/samba/smb.conf
 	fi
         
+        #Create supervisor
+        rm /etc/supervisor/conf.d/supervisord.conf && touch /etc/supervisor/conf.d/supervisord.conf
 	# Set up supervisor
-	echo "[supervisord]" > /etc/supervisor/conf.d/supervisord.conf
-	echo "nodaemon=true" >> /etc/supervisor/conf.d/supervisord.conf
+	{
+	echo "[supervisord]"
+	echo "nodaemon=true"
 	#Suppress CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
-	echo "user=root" >> /etc/supervisor/conf.d/supervisord.conf
-	echo "" >> /etc/supervisor/conf.d/supervisord.conf
-	echo "[program:samba]" >> /etc/supervisor/conf.d/supervisord.conf
-	echo "command=/usr/sbin/samba -i" >> /etc/supervisor/conf.d/supervisord.conf
-	echo "[program:ntpd]" >> /etc/supervisor/conf.d/supervisord.conf
-	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n" >> /etc/supervisor/conf.d/supervisord.conf
+	echo "user=root"
+	echo ""
+	echo "[program:samba]"
+	echo "command=/usr/sbin/samba -i"
+	echo "[program:ntpd]"
+	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"	        
+	} >> /etc/supervisor/conf.d/supervisord.conf
 	if [[ ${MULTISITE,,} == "true" ]]; then
 		if [[ -n $VPNPID ]]; then
 			kill $VPNPID
 		fi
-		echo "" >> /etc/supervisor/conf.d/supervisord.conf
-		echo "[program:openvpn]" >> /etc/supervisor/conf.d/supervisord.conf
-		echo "command=/usr/sbin/openvpn --config /docker.ovpn" >> /etc/supervisor/conf.d/supervisord.conf
+	{
+                echo ""
+	        echo "[program:openvpn]"
+	        echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
+	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
 
 	# Set up ntpd
-	echo "server 127.127.1.0" > /etc/ntpd.conf
-	echo "fudge  127.127.1.0 stratum 10" >> /etc/ntpd.conf
-	echo "server 0.pool.ntp.org     iburst prefer" >> /etc/ntpd.conf
-	echo "server 1.pool.ntp.org     iburst prefer" >> /etc/ntpd.conf
-	echo "server 2.pool.ntp.org     iburst prefer" >> /etc/ntpd.conf
-	echo "driftfile       /var/lib/ntp/ntp.drift" >> /etc/ntpd.conf
-	echo "logfile         /var/log/ntp" >> /etc/ntpd.conf
-	echo "ntpsigndsocket  /var/lib/ntp_signd/" >> /etc/ntpd.conf
-	echo "restrict default kod nomodify notrap nopeer mssntp" >> /etc/ntpd.conf
-	echo "restrict 127.0.0.1" >> /etc/ntpd.conf
-	echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery" >> /etc/ntpd.conf
-	echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery" >> /etc/ntpd.conf
-	echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery" >> /etc/ntpd.conf
+	rm /etc/ntpd.conf && touch /etc/ntpd.conf
+	{
+	echo "server 127.127.1.0"
+	echo "fudge  127.127.1.0 stratum 10"
+	echo "server 0.pool.ntp.org     iburst prefer"
+	echo "server 1.pool.ntp.org     iburst prefer"
+	echo "server 2.pool.ntp.org     iburst prefer"
+	echo "driftfile       /var/lib/ntp/ntp.drift"
+	echo "logfile         /var/log/ntp"
+	echo "ntpsigndsocket  /var/lib/ntp_signd/"
+	echo "restrict default kod nomodify notrap nopeer mssntp"
+	echo "restrict 127.0.0.1"
+	echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
+	echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
+	echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"	        
+	}  >> /etc/ntpd.conf
+
 
 	appStart
 }
