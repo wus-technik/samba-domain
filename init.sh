@@ -100,7 +100,7 @@ appSetup () {
 				\\\tldap server require strong auth = no\
 			" /etc/samba/smb.conf
 		fi
-		if [[ ${ADLoginOnUnix,,} == "true" ]]
+		if [[ ${ADLoginOnUnix,,} == "true" ]]; then
 		winbind enum users = yes
         winbind enum groups = yes
 		# nsswitch anpassen
