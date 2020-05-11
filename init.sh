@@ -105,8 +105,8 @@ appSetup () {
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${ADLoginOnUnix,,} == "true" ]]; then
-		winbind enum users = yes
-                winbind enum groups = yes
+			winbind enum users = yes
+			winbind enum groups = yes
 		# nsswitch anpassen
 		fi
 	
@@ -137,11 +137,11 @@ appSetup () {
 	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
 	#https://github.com/Supervisor/supervisor/issues/717
 	sed -i "/\[unix_http_server\]/a \
-         \\\tusername=dummy\\n\
-         password=dummy\
+\username=dummy\\n\
+password=dummy\
 	" /etc/supervisor/supervisord.conf
 	sed -i "/\[supervisorctl\]/a \
-\\\tusername = dummy\\n\
+\username = dummy\\n\
 password = dummy\
 	" /etc/supervisor/supervisord.conf	
 
