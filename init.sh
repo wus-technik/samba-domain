@@ -137,12 +137,12 @@ appSetup () {
 	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
 	#https://github.com/Supervisor/supervisor/issues/717
 	sed -i "/\[unix_http_server\]/a \
-		\\\tusername=dummy\\n\
-		password=dummy\\n\
+         \\\tusername=dummy\\n\
+         password=dummy\
 	" /etc/supervisor/supervisord.conf
 	sed -i "/\[supervisorctl\]/a \
-		\\\tusername = dummy\\n\
-		password = dummy\\n\
+\\\tusername = dummy\\n\
+password = dummy\
 	" /etc/supervisor/supervisord.conf	
 
 	if [[ ${MULTISITE,,} == "true" ]]; then
