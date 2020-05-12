@@ -72,7 +72,7 @@ appSetup () {
 			fi
 		fi
 		sed -i "/\[global\]/a \
-			\\\tidmap_ldb:use rfc2307 = yes\\n\
+	idmap_ldb:use rfc2307 = yes\\n\
 	wins support = yes\\n\
 	template shell = /bin/bash\\n\
 	winbind nss info = rfc2307\\n\
@@ -84,18 +84,19 @@ appSetup () {
 		fi
 		if [[ ${TLS,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
-			\\\ttls enabled  = yes\\n\
+	tls enabled  = yes\\n\
 	tls keyfile  = /etc/samba/tls/key.pem\\n\
 	tls certfile = /etc/samba/tls/crt.pem\\n\
 	tls cafile   = /etc/samba/tls/chain.pem\\n\
-	#tls crlfile   = /etc/samba/tls/crl.pem\\n\
-	#tls verify peer = ca_and_name\\n\
+	tls verify peer = ca_and_name\\n\
 		" /etc/samba/smb.conf
-
+#	tls crlfile   = /etc/samba/tls/crl.pem\\n\
+#	
+#
 		fi
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
-			\\\tlog file = /var/log/samba/%m.log\\n\
+	log file = /var/log/samba/%m.log\\n\
 	max log size = 10000\\n\
 	log level = 3\\n\
 			" /etc/samba/smb.conf
@@ -131,19 +132,20 @@ appSetup () {
 	echo ""
 	echo "[program:samba]"
 	echo "command=/usr/sbin/samba -F"
-	echo "#stdout_events_enabled=true"
-	echo "#stderr_events_enabled=true"
-	echo "stdout_logfile=/dev/stdout"
-	echo "stdout_logfile_maxbytes=0"
+	#echo "stdout_events_enabled=true"
+	#echo "stderr_events_enabled=true"
+	#echo "stdout_logfile=/dev/stdout"
+	#echo "stdout_logfile_maxbytes=0"
+	echo ""
 	echo "[program:ntpd]"
 	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"
-	echo "#stdout_events_enabled=true"
-	echo "#stderr_events_enabled=true"
-	echo "#[eventlistener:stdout]"
-	echo "#command = supervisor_stdout"
-	echo "#buffer_size = 100"
-	echo "#events = PROCESS_LOG"
-	echo "result_handler = supervisor_stdout:event_handler"
+	#echo "stdout_events_enabled=true"
+	#echo "stderr_events_enabled=true"
+	#echo "[eventlistener:stdout]"
+	#echo "command = supervisor_stdout"
+	#echo "buffer_size = 100"
+	#echo "events = PROCESS_LOG"
+	#echo "result_handler = supervisor_stdout:event_handler"
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	
 	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
