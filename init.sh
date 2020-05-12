@@ -73,9 +73,9 @@ appSetup () {
 		fi
 		sed -i "/\[global\]/a \
 			\\\tidmap_ldb:use rfc2307 = yes\\n\
-			wins support = yes\\n\
-			template shell = /bin/bash\\n\
-			winbind nss info = rfc2307\\n\
+	wins support = yes\\n\
+	template shell = /bin/bash\\n\
+	winbind nss info = rfc2307\\n\
 		" /etc/samba/smb.conf
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
@@ -85,23 +85,24 @@ appSetup () {
 		if [[ ${TLS,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
 			\\\ttls enabled  = yes\\n\
-			tls keyfile  = /etc/samba/tls/key.pem\\n\
-			tls certfile = /etc/samba/tls/crt.pem\\n\
-			tls cafile   = /etc/samba/tls/chain.pem\\n\
-			tls crlfile   = /etc/samba/tls/crl.pem\\n\
-			tls verify peer = ca_and_name\\n\
+	tls keyfile  = /etc/samba/tls/key.pem\\n\
+	tls certfile = /etc/samba/tls/crt.pem\\n\
+	tls cafile   = /etc/samba/tls/chain.pem\\n\
+	#tls crlfile   = /etc/samba/tls/crl.pem\\n\
+	#tls verify peer = ca_and_name\\n\
 		" /etc/samba/smb.conf
+
 		fi
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
-				\\\tlog file = /var/log/samba/%m.log\\n\
-				max log size = 10000\\n\
-				log level = 3\\n\
+			\\\tlog file = /var/log/samba/%m.log\\n\
+	max log size = 10000\\n\
+	log level = 3\\n\
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${INSECURELDAP,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
-				\\\tldap server require strong auth = no\
+			\\\tldap server require strong auth = no\
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${ADLoginOnUnix,,} == "true" ]]; then
@@ -129,7 +130,7 @@ appSetup () {
 	echo "user=root"
 	echo ""
 	echo "[program:samba]"
-	echo "command=/usr/sbin/samba -i"
+	echo "command=/usr/sbin/samba -F"
 	echo "[program:ntpd]"
 	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"
 	} >> /etc/supervisor/conf.d/supervisord.conf
