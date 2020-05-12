@@ -131,8 +131,19 @@ appSetup () {
 	echo ""
 	echo "[program:samba]"
 	echo "command=/usr/sbin/samba -F"
+	echo "#stdout_events_enabled=true"
+	echo "#stderr_events_enabled=true"
+	echo "stdout_logfile=/dev/stdout"
+	echo "stdout_logfile_maxbytes=0"
 	echo "[program:ntpd]"
 	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"
+	echo "#stdout_events_enabled=true"
+	echo "#stderr_events_enabled=true"
+	echo "#[eventlistener:stdout]"
+	echo "#command = supervisor_stdout"
+	echo "#buffer_size = 100"
+	echo "#events = PROCESS_LOG"
+	echo "result_handler = supervisor_stdout:event_handler"
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	
 	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
