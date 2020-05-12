@@ -72,10 +72,10 @@ appSetup () {
 			fi
 		fi
 		sed -i "/\[global\]/a \
-	idmap_ldb:use rfc2307 = yes\\n\
-	wins support = yes\\n\
-	template shell = /bin/bash\\n\
-	winbind nss info = rfc2307\\n\
+		idmap_ldb:use rfc2307 = yes\\n\
+		wins support = yes\\n\
+		template shell = /bin/bash\\n\
+		winbind nss info = rfc2307\\n\
 		" /etc/samba/smb.conf
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
@@ -84,11 +84,11 @@ appSetup () {
 		fi
 		if [[ ${TLS,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
-	tls enabled  = yes\\n\
-	tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
-	tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
-	tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
-	tls verify peer = ca_and_name\\n\
+		tls enabled  = yes\\n\
+		tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
+		tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
+		tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
+		tls verify peer = ca_and_name\\n\
 		" /etc/samba/smb.conf
 #	tls crlfile   = /etc/samba/tls/crl.pem\\n\
 #	
@@ -96,9 +96,9 @@ appSetup () {
 		fi
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
-	log file = /var/log/samba/%m.log\\n\
-	max log size = 10000\\n\
-	log level = 3\\n\
+			log file = /var/log/samba/%m.log\\n\
+			max log size = 10000\\n\
+			log level = 3\\n\
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${INSECURELDAP,,} == "true" ]]; then
