@@ -180,6 +180,10 @@ password = dummy\
 	echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
 	echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"	        
 	}  >> /etc/ntpd.conf
+	
+	# Own socket
+	chown root:ntp /var/lib/samba/ntp_signd/
+	chmod 750 /var/lib/samba/ntp_signd/
 
 
 	appStart
@@ -192,8 +196,6 @@ appStart () {
 case "$1" in
 	start)
 		if [[ -f /etc/samba/external/smb.conf ]]; then
-			chown root:ntp /var/lib/samba/ntp_signd/
-			chmod 750 /var/lib/samba/ntp_signd/
 			cp /etc/samba/external/smb.conf /etc/samba/smb.conf
 			appStart
 		else
