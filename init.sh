@@ -85,9 +85,9 @@ appSetup () {
 		if [[ ${TLS,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
 	tls enabled  = yes\\n\
-	tls keyfile  = /etc/samba/tls/key.pem\\n\
-	tls certfile = /etc/samba/tls/crt.pem\\n\
-	tls cafile   = /etc/samba/tls/chain.pem\\n\
+	tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
+	tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
+	tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
 	tls verify peer = ca_and_name\\n\
 		" /etc/samba/smb.conf
 #	tls crlfile   = /etc/samba/tls/crl.pem\\n\
