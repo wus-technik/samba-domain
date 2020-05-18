@@ -206,12 +206,12 @@ password = dummy\
 	  }  >> /etc/ntpd.conf
 	else
 	  {
-	  echo "# Local clock. Note that is not the "localhost" address!"
+	  echo "# Local clock. Note that is not the localhost address!"
 	  echo "server 127.127.1.0"
 	  echo "fudge  127.127.1.0 stratum 10"
  
 	  echo "# Where to retrieve the time from"
-	 echo "server DC01.${LDOMAIN}    iburst prefer"
+	  echo "server DC01.${LDOMAIN}    iburst prefer"
 	  echo "server DC02.${LDOMAIN}    iburst"
 
 	  echo "driftfile /var/lib/ntp/ntp.drift"
