@@ -197,7 +197,7 @@ password = dummy\
 	  echo "server 2.pool.ntp.org     iburst prefer"
 	  echo "driftfile       /var/lib/ntp/ntp.drift"
 	  echo "logfile         /var/log/ntp"
-	  echo "ntpsigndsocket  /var/lib/ntp_signd/"
+	  echo "ntpsigndsocket  /var/lib/ntp_signed/"
 	  echo "restrict default kod nomodify notrap nopeer mssntp"
 	  echo "restrict 127.0.0.1"
 	  echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
