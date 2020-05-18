@@ -232,8 +232,8 @@ password = dummy\
 	  } >> /etc/ntpd.conf
 		
 	# Own socket
-	chown root:ntp /var/lib/samba/ntp_signd/
-	chmod 750 /var/lib/samba/ntp_signd/
+	chown root:ntp /var/lib/samba/ntp_signed/
+	chmod 750 /var/lib/samba/ntp_signed/
 fi
 
 	appStart
