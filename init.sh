@@ -18,9 +18,9 @@ appSetup () {
 	LOGS=${LOGS:-false}
 	ADLoginOnUnix=${ADLoginOnUnix:-false}
 	
-	LDOMAIN=${DOMAIN,,}
-	UDOMAIN=${DOMAIN^^}
-	URDOMAIN=${UDOMAIN%%.*}
+	LDOMAIN=${DOMAIN,,} #alllowercase
+	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
+	URDOMAIN=${UDOMAIN%%.*} #trim
 
 	# If multi-site, we need to connect to the VPN before joining the domain
 	if [[ ${MULTISITE,,} == "true" ]]; then
@@ -71,11 +71,27 @@ appSetup () {
 				samba-tool domain passwordsettings set --max-pwd-age=0
 			fi
 		fi
+		if [[ ${JOIN,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
 		idmap_ldb:use rfc2307 = yes\\n\
+		idmap config * : backend = tdb\\n\
+		idmap config * : range = 1000000-1999999\\n\
+		idmap config ${URDOMAIN} : backend = ad\\n\
+		idmap config ${URDOMAIN} : range = 2000000-2999999\\n\
+		idmap config ${URDOMAIN} : schema_mode = rfc2307\\n\
+		idmap config ${URDOMAIN} : unix_nss_info = yes\\n\
+		#idmap config ${URDOMAIN} : unix_primary_group = yes\\n\	
+		vfs objects = acl_xattr\\n\
+		map acl inherit = yes\\n\
+		store dos attributes = yes\
+		" /etc/samba/smb.conf
+
+		fi
+		sed -i "/\[global\]/a \
 		wins support = yes\\n\
+		# Template settings for login shell and home directory\\n\
 		template shell = /bin/bash\\n\
-		winbind nss info = rfc2307\\n\
+		template homedir = /home/%U\
 		" /etc/samba/smb.conf
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
@@ -94,6 +110,14 @@ appSetup () {
 #	
 #
 		fi
+		#Remove Printers ALWAYS
+		{		
+		echo "load printers = no"
+		echo "printing = bsd"
+		echo "printcap name = /dev/null"
+		echo "disable spoolss = yes"
+		} >> /etc/samba/smb.conf
+		
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
 			log file = /var/log/samba/%m.log\\n\
@@ -162,29 +186,55 @@ password = dummy\
 	        echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
+	if [[ ${JOIN,,} == "true" ]]; then
+	  # Set up ntpd
+	  touch /etc/ntpd.conf
+	  {
+	  echo "server 127.127.1.0"
+	  echo "fudge  127.127.1.0 stratum 10"
+	  echo "server 0.pool.ntp.org     iburst prefer"
+	  echo "server 1.pool.ntp.org     iburst prefer"
+	  echo "server 2.pool.ntp.org     iburst prefer"
+	  echo "driftfile       /var/lib/ntp/ntp.drift"
+	  echo "logfile         /var/log/ntp"
+	  echo "ntpsigndsocket  /var/lib/ntp_signd/"
+	  echo "restrict default kod nomodify notrap nopeer mssntp"
+	  echo "restrict 127.0.0.1"
+	  echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
+	  echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
+	  echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"	        
+	  }  >> /etc/ntpd.conf
+	else
+	  {
+	  echo "# Local clock. Note that is not the "localhost" address!"
+	  echo "server 127.127.1.0"
+	  echo "fudge  127.127.1.0 stratum 10"
+ 
+	  echo "# Where to retrieve the time from"
+	 echo "server DC01.${LDOMAIN}    iburst prefer"
+	  echo "server DC02.${LDOMAIN}    iburst"
 
-	# Set up ntpd
-	touch /etc/ntpd.conf
-	{
-	echo "server 127.127.1.0"
-	echo "fudge  127.127.1.0 stratum 10"
-	echo "server 0.pool.ntp.org     iburst prefer"
-	echo "server 1.pool.ntp.org     iburst prefer"
-	echo "server 2.pool.ntp.org     iburst prefer"
-	echo "driftfile       /var/lib/ntp/ntp.drift"
-	echo "logfile         /var/log/ntp"
-	echo "ntpsigndsocket  /var/lib/ntp_signd/"
-	echo "restrict default kod nomodify notrap nopeer mssntp"
-	echo "restrict 127.0.0.1"
-	echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"	        
-	}  >> /etc/ntpd.conf
-	
+	  echo "driftfile /var/lib/ntp/ntp.drift"
+	  echo "logfile   /var/log/ntp"
+
+	  echo "# Access control"
+	  echo "# Default restriction: Disallow everything"
+	  echo "restrict default ignore"
+
+	  echo "# No restrictions for localhost"
+	  echo "restrict 127.0.0.1"
+
+	  echo "# Enable the time sources only to only provide time to this host"
+	  echo "restrict DC01.${LDOMAIN}  mask 255.255.255.255    nomodify notrap nopeer noquery"
+	  echo "restrict DC02.${LDOMAIN}  mask 255.255.255.255    nomodify notrap nopeer noquery"
+	  echo ""
+	  echo "tinker panic 0"
+	  } >> /etc/ntpd.conf
+		
 	# Own socket
 	chown root:ntp /var/lib/samba/ntp_signd/
 	chmod 750 /var/lib/samba/ntp_signd/
-
+fi
 
 	appStart
 }
