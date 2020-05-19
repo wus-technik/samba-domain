@@ -104,7 +104,7 @@ appSetup () {
 		tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
 		tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
 		tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
-		tls verify peer = ca_and_name\\n\
+		tls verify peer = ca_and_name\
 		" /etc/samba/smb.conf
 #	tls crlfile   = /etc/samba/tls/crl.pem\\n\
 #	
@@ -116,14 +116,14 @@ appSetup () {
 		load printers = no\\n\
 		printing = bsd\\n\
 		printcap name = /dev/null\\n\
-		disable spoolss = yes\\n\
+		disable spoolss = yes\
 		" /etc/samba/smb.conf
 		
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
 			log file = /var/log/samba/%m.log\\n\
 			max log size = 10000\\n\
-			log level = 3\\n\
+			log level = 3\
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${INSECURELDAP,,} == "true" ]]; then
@@ -171,22 +171,22 @@ appSetup () {
 	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
 	#https://github.com/Supervisor/supervisor/issues/717
 	sed -i "/\[unix_http_server\]/a \
-\username=dummy\\n\
+username=dummy\\n\
 password=dummy\
 	" /etc/supervisor/supervisord.conf
 	sed -i "/\[supervisorctl\]/a \
-\username = dummy\\n\
+username = dummy\\n\
 password = dummy\
 	" /etc/supervisor/supervisord.conf	
 
 	if [[ ${MULTISITE,,} == "true" ]]; then
-		if [[ -n $VPNPID ]]; then
-			kill $VPNPID
-		fi
+	  if [[ -n $VPNPID ]]; then
+	    kill $VPNPID	
+	  fi
 	{
-                echo ""
-	        echo "[program:openvpn]"
-	        echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
+      echo ""
+	  echo "[program:openvpn]"
+	  echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
 	if [[ ${JOIN,,} == "true" ]]; then
@@ -234,11 +234,11 @@ password = dummy\
 	  echo "tinker panic 0"
 	  } >> /etc/ntpd.conf
 		
-	# Own socket
-	mkdir -p /var/lib/samba/ntp_signd/
-	chown root:ntp /var/lib/samba/ntp_signd/
-	chmod 750 /var/lib/samba/ntp_signd/
-fi
+	  # Own socket
+	  mkdir -p /var/lib/samba/ntp_signd/
+	  chown root:ntp /var/lib/samba/ntp_signd/
+	  chmod 750 /var/lib/samba/ntp_signd/
+    fi
 
 	appStart
 }
