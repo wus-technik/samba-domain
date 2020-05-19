@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+#set -e
+set -x
 
 appSetup () {
 
@@ -80,7 +81,7 @@ appSetup () {
 		idmap config ${URDOMAIN} : range = 2000000-2999999\\n\
 		idmap config ${URDOMAIN} : schema_mode = rfc2307\\n\
 		idmap config ${URDOMAIN} : unix_nss_info = yes\\n\
-		#idmap config ${URDOMAIN} : unix_primary_group = yes\\n\	
+		#idmap config ${URDOMAIN} : unix_primary_group = yes\\n\
 		vfs objects = acl_xattr\\n\
 		map acl inherit = yes\\n\
 		store dos attributes = yes\
@@ -112,7 +113,7 @@ appSetup () {
 		fi
 		
 		#Remove Printers ALWAYS
-		sed -i "/\[global\]/a \		
+		sed -i "/\[global\]/a \
 		load printers = no\\n\
 		printing = bsd\\n\
 		printcap name = /dev/null\\n\
