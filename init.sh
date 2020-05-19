@@ -110,13 +110,14 @@ appSetup () {
 #	
 #
 		fi
+		
 		#Remove Printers ALWAYS
-		{		
-		echo "load printers = no"
-		echo "printing = bsd"
-		echo "printcap name = /dev/null"
-		echo "disable spoolss = yes"
-		} >> /etc/samba/smb.conf
+		sed -i "/\[global\]/a \		
+		load printers = no\\n\
+		printing = bsd\\n\
+		printcap name = /dev/null\\n\
+		disable spoolss = yes\\n\
+		" /etc/samba/smb.conf
 		
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
@@ -156,13 +157,15 @@ appSetup () {
 	echo ""
 	echo "[program:samba]"
 	echo "command=/usr/sbin/samba -F"
-	echo " stdout_logfile=/dev/fd/1"
+	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
+	echo "stdout_logfile_backups=0"
 	echo ""
 	echo "[program:ntpd]"
 	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"
-	echo " stdout_logfile=/dev/fd/1"
+	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
+	echo "stdout_logfile_backups=0"
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	
 	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
