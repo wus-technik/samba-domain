@@ -15,9 +15,9 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 * `NOCOMPLEXITY` defaults to `false`. When set to `true` it removes password complexity requirements including `complexity, history-length, min-pwd-age, max-pwd-age`
 * `TLS` defaults to `false`. When set to `true` it creates certificate files for ldaps
 * `LOGS` defaults to `false`. When set to `true` it creates log file in /var/log/samba for kerberos and samba. Add a mapping
-* `ADLoginOnUnix` defaults to `false`. When false nothing changes. When true windbind is added to `/etc/nsswitch.conf` and `windbind enum users` and `winbind enum groups` are enabled.
+* `ADLOGINONUNIX` defaults to `false`. When false nothing changes. When true windbind is added to `/etc/nsswitch.conf` and `windbind enum users` and `winbind enum groups` are enabled.
+* `FREERADIUS` defaults to `false`. When false nothing changes. When true ntlm auth = mschapv2-and-ntlmv2-only is added to config.
 
-ADLoginOnUnix
 ## Volumes for quick start
 
 * `/etc/localtime:/etc/localtime:ro` - Sets the timezone to match the host

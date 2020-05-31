@@ -17,7 +17,7 @@ appSetup () {
 	HOSTIP=${HOSTIP:-NONE}
 	TLS=${TLS:-false}
 	LOGS=${LOGS:-false}
-	ADLoginOnUnix=${ADLoginOnUnix:-false}
+	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
@@ -74,68 +74,83 @@ appSetup () {
 		fi
 		if [[ ${JOIN,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
-		idmap_ldb:use rfc2307 = yes\\n\
-		idmap config * : backend = tdb\\n\
-		idmap config * : range = 1000000-1999999\\n\
-		idmap config ${URDOMAIN} : backend = ad\\n\
-		idmap config ${URDOMAIN} : range = 2000000-2999999\\n\
-		idmap config ${URDOMAIN} : schema_mode = rfc2307\\n\
-		idmap config ${URDOMAIN} : unix_nss_info = yes\\n\
-		#idmap config ${URDOMAIN} : unix_primary_group = yes\\n\
-		vfs objects = acl_xattr\\n\
-		map acl inherit = yes\\n\
-		store dos attributes = yes\
+idmap_ldb:use rfc2307 = yes\\n\
+idmap config * : backend = tdb\\n\
+idmap config * : range = 1000000-1999999\\n\
+idmap config ${URDOMAIN} : backend = ad\\n\
+idmap config ${URDOMAIN} : range = 2000000-2999999\\n\
+idmap config ${URDOMAIN} : schema_mode = rfc2307\\n\
+idmap config ${URDOMAIN} : unix_nss_info = yes\\n\
+#idmap config ${URDOMAIN} : unix_primary_group = yes\\n\
+#Without it your kerberos tickets will expire and not be renewed\\n\
+#winbind refresh tickets = Yes\\n\
+#If you do not want to enter the domain set in 'workgroup =' during login etc (just 'username' instead of DOMAIN\username)\\n\
+winbind use default domain = yes\\n\
+vfs objects = acl_xattr\\n\
+map acl inherit = yes\\n\
+#Creating Keytab on join\\n\
+dedicated keytab file = /etc/krb5.keytab\\n\
+kerberos method = secrets and keytab\\n\
+store dos attributes = yes\
 		" /etc/samba/smb.conf
-
-		fi
+		
+		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
+		echo "!root = SAMDOM\Administrator SAMDOM\administrator" > /etc/samba/user.map
+		username map = /etc/samba/user.map
 		sed -i "/\[global\]/a \
-		wins support = yes\\n\
-		# Template settings for login shell and home directory\\n\
-		template shell = /bin/bash\\n\
-		template homedir = /home/%U\
+username map = /etc/samba/user.map\
 		" /etc/samba/smb.conf
+		fi
+
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
 				\\\tdns forwarder = ${DNSFORWARDER}\
 				" /etc/samba/smb.conf
 		fi
+		
 		if [[ ${TLS,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
-		tls enabled  = yes\\n\
-		tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
-		tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
-		tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
-		tls verify peer = ca_and_name\
+tls enabled  = yes\\n\
+tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
+tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
+tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
+tls verify peer = ca_and_name\
 		" /etc/samba/smb.conf
 #	tls crlfile   = /etc/samba/tls/crl.pem\\n\
 #	
 #
 		fi
-		
-		#Remove Printers ALWAYS
-		sed -i "/\[global\]/a \
-		load printers = no\\n\
-		printing = bsd\\n\
-		printcap name = /dev/null\\n\
-		disable spoolss = yes\
-		" /etc/samba/smb.conf
+	sed -i "/\[global\]/a \
+wins support = yes\\n\
+# Template settings for login shell and home directory\\n\
+template shell = /bin/bash\\n\
+template homedir = /home/%U\\n\
+load printers = no\\n\
+printing = bsd\\n\
+printcap name = /dev/null\\n\
+disable spoolss = yes\
+	" /etc/samba/smb.conf
 		
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
-			log file = /var/log/samba/%m.log\\n\
-			max log size = 10000\\n\
-			log level = 3\
+log file = /var/log/samba/%m.log\\n\
+max log size = 10000\\n\
+log level = 3\
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${INSECURELDAP,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
-			\\\tldap server require strong auth = no\
+ldap server require strong auth = no\
 			" /etc/samba/smb.conf
 		fi
-		if [[ ${ADLoginOnUnix,,} == "true" ]]; then
+		if [[ ${ADLOGINONUNIX,,} == "true" ]]; then
 			winbind enum users = yes
 			winbind enum groups = yes
 		# nsswitch anpassen
+		sed -i "s,passwd:.*,passwd:         files winbind,g" "/etc/nsswitch.conf"
+		sed -i "s,group:.*,group:          files winbind,g" "/etc/nsswitch.conf"
+		sed -i "s,hosts:.*,hosts:          files dns,g" "/etc/nsswitch.conf"
+		sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
 		fi
 	
         #Drop privileges
