@@ -97,8 +97,7 @@ fi
 			fi
 		else
 			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
-			#Reverse DNS Zone
-			samba-tool dns zonecreate "$HOSTIP" "$NET_ADDR_ARPA_REV" -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}"
+
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
 				samba-tool domain passwordsettings set --complexity=off
 				samba-tool domain passwordsettings set --history-length=0
@@ -314,6 +313,8 @@ case "$1" in
 			appStart
 		else
 			appSetup
+			#Reverse DNS Zone
+			samba-tool dns zonecreate "$HOSTIP" "$NET_ADDR_ARPA_REV" -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}"
 		fi
 		;;
 esac
