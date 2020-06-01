@@ -15,6 +15,7 @@ appSetup () {
 	INSECURELDAP=${INSECURELDAP:-false}
 	DNSFORWARDER=${DNSFORWARDER:-NONE}
 	HOSTIP=${HOSTIP:-NONE}
+	NETMASK=${NETMASK:-255.255.255.0}
 	TLS=${TLS:-false}
 	LOGS=${LOGS:-false}
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
@@ -22,6 +23,37 @@ appSetup () {
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
 	URDOMAIN=${UDOMAIN%%.*} #trim
+
+#############################################
+#Start IP Helper
+#############################################
+mask2cdr ()
+{
+   # Assumes there's no "255." after a non-255 byte in the mask
+   local x=${1##*255.}
+   set -- 0^^^128^192^224^240^248^252^254^ $(( (${#1} - ${#x})*2 )) ${x%%.*}
+   x=${1%%$3*}
+   echo $(( $2 + (${#x}/4) ))
+}
+
+IFS=. read -r io1 io2 io3 io4 <<< "$HOSTIP"
+IFS=. read -r mo1 mo2 mo3 mo4 <<< "$NETMASK"
+NET_ADDR="$((io1 & mo1)).$(($io2 & mo2)).$((io3 & mo3)).$((io4 & mo4))"
+CDR="$(mask2cdr "$NETMASK")"
+if [[ $CDR == 24 ]]; then
+NET_ADDR_ARPA_REV=$(sed -r 's/^([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3})$/\3.\2.\1.in-addr.arpa/g' <<< "$NET_ADDR")
+fi
+if [[ $CDR == 16 ]]; then
+NET_ADDR_ARPA_REV=$(sed -r 's/^([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3})$/\2.\1.in-addr.arpa/g' <<< "$NET_ADDR")
+fi
+if [[ $CDR == 8 ]]; then
+NET_ADDR_ARPA_REV=$(sed -r 's/^([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3})$/\1.in-addr.arpa/g' <<< "$NET_ADDR")
+fi
+#############################################
+#Stop IP Helper
+#############################################
+
+
 
 	# If multi-site, we need to connect to the VPN before joining the domain
 	if [[ ${MULTISITE,,} == "true" ]]; then
@@ -65,6 +97,8 @@ appSetup () {
 			fi
 		else
 			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
+			#Reverse DNS Zone
+			samba-tool dns zonecreate "$HOSTIP" "$NET_ADDR_ARPA_REV" -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}"
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
 				samba-tool domain passwordsettings set --complexity=off
 				samba-tool domain passwordsettings set --history-length=0
@@ -120,7 +154,7 @@ tls verify peer = ca_and_name\
 #	
 #
 		fi
-	sed -i "/\[global\]/a \
+		sed -i "/\[global\]/a \
 wins support = yes\\n\
 # Template settings for login shell and home directory\\n\
 template shell = /bin/bash\\n\
@@ -129,7 +163,7 @@ load printers = no\\n\
 printing = bsd\\n\
 printcap name = /dev/null\\n\
 disable spoolss = yes\
-	" /etc/samba/smb.conf
+		" /etc/samba/smb.conf
 		
 		if [[ ${LOGS,,} == "true" ]]; then
 			sed -i "/\[global\]/a \
@@ -144,8 +178,10 @@ ldap server require strong auth = no\
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${ADLOGINONUNIX,,} == "true" ]]; then
-			winbind enum users = yes
-			winbind enum groups = yes
+			sed -i "/\[global\]/a \
+winbind enum users = yes\\n\
+winbind enum groups = yes\\n\
+			" /etc/samba/smb.conf
 		# nsswitch anpassen
 		sed -i "s,passwd:.*,passwd:         files winbind,g" "/etc/nsswitch.conf"
 		sed -i "s,group:.*,group:          files winbind,g" "/etc/nsswitch.conf"
