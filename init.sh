@@ -24,37 +24,6 @@ appSetup () {
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
 	URDOMAIN=${UDOMAIN%%.*} #trim
 
-#############################################
-#Start IP Helper
-#############################################
-mask2cdr ()
-{
-   # Assumes there's no "255." after a non-255 byte in the mask
-   local x=${1##*255.}
-   set -- 0^^^128^192^224^240^248^252^254^ $(( (${#1} - ${#x})*2 )) ${x%%.*}
-   x=${1%%$3*}
-   echo $(( $2 + (${#x}/4) ))
-}
-
-IFS=. read -r io1 io2 io3 io4 <<< "$HOSTIP"
-IFS=. read -r mo1 mo2 mo3 mo4 <<< "$NETMASK"
-NET_ADDR="$((io1 & mo1)).$(($io2 & mo2)).$((io3 & mo3)).$((io4 & mo4))"
-CDR="$(mask2cdr "$NETMASK")"
-if [[ $CDR == 24 ]]; then
-NET_ADDR_ARPA_REV=$(sed -r 's/^([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3})$/\3.\2.\1.in-addr.arpa/g' <<< "$NET_ADDR")
-fi
-if [[ $CDR == 16 ]]; then
-NET_ADDR_ARPA_REV=$(sed -r 's/^([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3})$/\2.\1.in-addr.arpa/g' <<< "$NET_ADDR")
-fi
-if [[ $CDR == 8 ]]; then
-NET_ADDR_ARPA_REV=$(sed -r 's/^([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3}).([0-9]{1,3})$/\1.in-addr.arpa/g' <<< "$NET_ADDR")
-fi
-#############################################
-#Stop IP Helper
-#############################################
-
-
-
 	# If multi-site, we need to connect to the VPN before joining the domain
 	if [[ ${MULTISITE,,} == "true" ]]; then
 		/usr/sbin/openvpn --config /docker.ovpn &
@@ -129,7 +98,6 @@ store dos attributes = yes\
 		
 		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
 		echo "!root = SAMDOM\Administrator SAMDOM\administrator" > /etc/samba/user.map
-		username map = /etc/samba/user.map
 		sed -i "/\[global\]/a \
 username map = /etc/samba/user.map\
 		" /etc/samba/smb.conf
@@ -291,8 +259,7 @@ password = dummy\
 	  chmod 750 /var/lib/samba/ntp_signd/
     fi
 
-	appStart
-	samba-tool dns zonecreate "$HOSTIP" "$NET_ADDR_ARPA_REV" -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}"
+	appStart	
 }
 
 appStart () {
