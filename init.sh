@@ -292,6 +292,7 @@ password = dummy\
     fi
 
 	appStart
+	samba-tool dns zonecreate "$HOSTIP" "$NET_ADDR_ARPA_REV" -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}"
 }
 
 appStart () {
@@ -313,8 +314,6 @@ case "$1" in
 			appStart
 		else
 			appSetup
-			#Reverse DNS Zone
-			samba-tool dns zonecreate "$HOSTIP" "$NET_ADDR_ARPA_REV" -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}"
 		fi
 		;;
 esac
