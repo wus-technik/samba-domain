@@ -17,7 +17,16 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 * `LOGS` defaults to `false`. When set to `true` it creates log file in /var/log/samba for kerberos and samba. Add a mapping
 * `ADLOGINONUNIX` defaults to `false`. When false nothing changes. When true windbind is added to `/etc/nsswitch.conf` and `windbind enum users` and `winbind enum groups` are enabled.
 * `FREERADIUS` defaults to `false`. When false nothing changes. When true ntlm auth = mschapv2-and-ntlmv2-only is added to config.
-* `NETMASK` default 255.255.255.0. Set and change value if needed.
+
+## Add Reverse DNS Zone
+docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
+## Add Share Privileges to DomAdmin Group
+docker exec -it samba-ad-dc "net rpc rights grant "<URDOMAIN>\Domain Admins" SeDiskOperatorPrivilege -U<URDOMAIN>\administrator --password=<DOMAINPASS> "
+## Leave domain on exit of samba member
+net ads leave -UAdministrator --password
+
+##Fix DNS Update errors - Failed DNS update - with error code 26 - by setting update command to use RPC instead of D$
+add to smb.conf => dns update command = /usr/sbin/samba_dnsupdate --use-samba-tool
 
 ## Volumes for quick start
 

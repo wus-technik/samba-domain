@@ -15,10 +15,10 @@ appSetup () {
 	INSECURELDAP=${INSECURELDAP:-false}
 	DNSFORWARDER=${DNSFORWARDER:-NONE}
 	HOSTIP=${HOSTIP:-NONE}
-	NETMASK=${NETMASK:-255.255.255.0}
 	TLS=${TLS:-false}
 	LOGS=${LOGS:-false}
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
+	FREERADIUS=${FREERADIUS:-false}
 	
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
@@ -64,6 +64,7 @@ appSetup () {
 			else
 				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL --site="${JOINSITE}"
 			fi
+			tdbbackup -s .bak /var/lib/samba/private/idmap.ldb
 		else
 			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
 
@@ -110,16 +111,24 @@ username map = /etc/samba/user.map\
 		fi
 		
 		if [[ ${TLS,,} == "true" ]]; then
+		openssl dhparam -out /tmp/dh.key 2048 
+		cp /tmp/dh.key /var/lib/samba/private/tls/dh.key
 		sed -i "/\[global\]/a \
 tls enabled  = yes\\n\
 tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
 tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
 tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
+tls cafile   = /var/lib/samba/private/tls/dh.key\\n\
 tls verify peer = ca_and_name\
 		" /etc/samba/smb.conf
 #	tls crlfile   = /etc/samba/tls/crl.pem\\n\
 #	
 #
+		fi
+		if [[ ${FREERADIUS,,} == "true" ]]; then
+		sed -i "/\[global\]/a \
+ntlm auth = mschapv2-and-ntlmv2-only\
+		" /etc/samba/smb.conf
 		fi
 		sed -i "/\[global\]/a \
 wins support = yes\\n\
