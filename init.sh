@@ -52,7 +52,7 @@ appSetup () {
 	echo "[logging]"  >> /etc/krb5.conf
 	echo "    default = FILE:/var/log/samba/krb5libs.log"
 	echo "    kdc = FILE:/var/log/samba/krb5kdc.log"
-	echo "    admin_server = FILE:/var/log/samba/kadmind.log" 	        
+	echo "    admin_server = FILE:/var/log/samba/kadmind.log"
 	} >> /etc/krb5.conf
 	fi
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
@@ -64,7 +64,7 @@ appSetup () {
 			else
 				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL --site="${JOINSITE}"
 			fi
-			tdbbackup -s .bak /var/lib/samba/private/idmap.ldb
+			#tdbbackup -s .bak /var/lib/samba/private/idmap.ldb
 		else
 			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
 
