@@ -15,7 +15,7 @@ appSetup () {
 	INSECURELDAP=${INSECURELDAP:-false}
 	DNSFORWARDER=${DNSFORWARDER:-NONE}
 	HOSTIP=${HOSTIP:-NONE}
-	TLS=${TLS:-false}
+	TLS=${TLS:-true}
 	LOGS=${LOGS:-false}
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	FREERADIUS=${FREERADIUS:-false}
@@ -93,7 +93,8 @@ vfs objects = acl_xattr\\n\
 map acl inherit = yes\\n\
 #Creating Keytab on join\\n\
 dedicated keytab file = /etc/krb5.keytab\\n\
-kerberos method = secrets and keytab\\n\
+#kerberos method = secrets and keytab\\n\
+kerberos method = dedicated keytab
 store dos attributes = yes\
 		" /etc/samba/smb.conf
 		
@@ -111,19 +112,18 @@ username map = /etc/samba/user.map\
 		fi
 		
 		if [[ ${TLS,,} == "true" ]]; then
-		openssl dhparam -out /tmp/dh.key 2048 
-		cp /tmp/dh.key /var/lib/samba/private/tls/dh.key
+		openssl dhparam -out /var/lib/samba/private/tls/dh.key 2048 
 		sed -i "/\[global\]/a \
 tls enabled  = yes\\n\
 tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
-tls certfile = /var/lib/samba/private/tls/crt.pem\\n\
-tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
-tls cafile   = /var/lib/samba/private/tls/dh.key\\n\
-tls verify peer = ca_and_name\
+tls certfile = /var/lib/samba/private/tls/cert.pem\\n\
+#tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
+tls cafile   = /var/lib/samba/private/tls/ca.pem\\n\
+tls dh params file = /var/lib/samba/private/tls/dh.key\\n\
+#tls crlfile   = /etc/samba/tls/crl.pem\\n\
+#tls verify peer = ca_and_name\
 		" /etc/samba/smb.conf
-#	tls crlfile   = /etc/samba/tls/crl.pem\\n\
-#	
-#
+
 		fi
 		if [[ ${FREERADIUS,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
