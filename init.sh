@@ -171,7 +171,7 @@ winbind enum groups = yes\\n\
 		sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
 		fi
 		
-		if [[ ${JOINMEMBER,,} != "true" ]]; then
+		if [[ ${JOINMEMBER,,} == "true" ]]; then
 			net ads join -U administrator%${DOMAINPASS}
 		fi
         #Drop privileges
