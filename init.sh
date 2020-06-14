@@ -230,22 +230,6 @@ password = dummy\
 	  # Set up ntpd
 	  touch /etc/ntpd.conf
 	  {
-	  echo "server 127.127.1.0"
-	  echo "fudge  127.127.1.0 stratum 10"
-	  echo "server 0.pool.ntp.org     iburst prefer"
-	  echo "server 1.pool.ntp.org     iburst prefer"
-	  echo "server 2.pool.ntp.org     iburst prefer"
-	  echo "driftfile       /var/lib/ntp/ntp.drift"
-	  echo "logfile         /var/log/ntp"
-	  echo "ntpsigndsocket  /var/lib/samba/ntp_signd/"
-	  echo "restrict default kod nomodify notrap nopeer mssntp"
-	  echo "restrict 127.0.0.1"
-	  echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"	        
-	  }  >> /etc/ntpd.conf
-	else
-	  {
 	  echo "# Local clock. Note that is not the localhost address!"
 	  echo "server 127.127.1.0"
 	  echo "fudge  127.127.1.0 stratum 10"
@@ -270,7 +254,23 @@ password = dummy\
 	  echo ""
 	  echo "tinker panic 0"
 	  } >> /etc/ntpd.conf
-		
+	else
+	  {
+	  echo "server 127.127.1.0"
+	  echo "fudge  127.127.1.0 stratum 10"
+	  echo "server 0.pool.ntp.org     iburst prefer"
+	  echo "server 1.pool.ntp.org     iburst prefer"
+	  echo "server 2.pool.ntp.org     iburst prefer"
+	  echo "driftfile       /var/lib/ntp/ntp.drift"
+	  echo "logfile         /var/log/ntp"
+	  echo "ntpsigndsocket  /var/lib/samba/ntp_signd/"
+	  echo "restrict default kod nomodify notrap nopeer mssntp"
+	  echo "restrict 127.0.0.1"
+	  echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
+	  echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
+	  echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"	        
+	  }  >> /etc/ntpd.conf
+
 	  # Own socket
 	  mkdir -p /var/lib/samba/ntp_signd/
 	  chown root:ntp /var/lib/samba/ntp_signd/

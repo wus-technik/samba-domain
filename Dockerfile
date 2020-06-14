@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get upgrade -y \
     # Install all required packages \
-    && apt-get install -y ntp pkg-config attr acl samba smbclient ldap-utils winbind libnss-winbind libpam-winbind krb5-user krb5-kdc supervisor openssl \
+    && apt-get install -y ntp pkg-config attr acl samba smbclient ldap-utils winbind libnss-winbind libpam-winbind krb5-user krb5-kdc supervisor openssl dnsutils \
     # line below is for multi-site config (ping is for testing later) \
     #&& apt-get install -y openvpn inetutils-ping \
     # Set up script \
