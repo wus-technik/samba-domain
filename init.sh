@@ -8,7 +8,8 @@ appSetup () {
 	# Set variables
 	DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
 	DOMAINPASS=${DOMAINPASS:-youshouldsetapassword}
-	JOIN=${JOIN:-false}
+	JOINDC=${JOINDC:-false}
+	JOINMEMBER=${JOINMEMBER:-false}
 	JOINSITE=${JOINSITE:-NONE}
 	MULTISITE=${MULTISITE:-false}
 	NOCOMPLEXITY=${NOCOMPLEXITY:-false}
@@ -58,7 +59,7 @@ appSetup () {
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
 	if [[ ! -f /etc/samba/external/smb.conf ]]; then
 		mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
-		if [[ ${JOIN,,} == "true" ]]; then
+		if [[ ${JOINDC,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
 				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL
 			else
@@ -75,8 +76,9 @@ appSetup () {
 				samba-tool domain passwordsettings set --max-pwd-age=0
 			fi
 		fi
-		if [[ ${JOIN,,} == "true" ]]; then
+		if [[ ${JOINMEMBER,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
+security = ADS\\n\
 idmap_ldb:use rfc2307 = yes\\n\
 idmap config * : backend = tdb\\n\
 idmap config * : range = 1000000-1999999\\n\
@@ -164,7 +166,10 @@ winbind enum groups = yes\\n\
 		sed -i "s,hosts:.*,hosts:          files dns,g" "/etc/nsswitch.conf"
 		sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
 		fi
-	
+		
+		if [[ ${JOINMEMBER,,} != "true" ]]; then
+			net ads join -U administrator%${DOMAINPASS}
+		fi
         #Drop privileges
 		#https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
          
@@ -217,7 +222,7 @@ password = dummy\
 	  echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
-	if [[ ${JOIN,,} == "true" ]]; then
+	if [[ ${JOIN,,} == "true" || ${JOINMEMBER,,} == "true"]]; then
 	  # Set up ntpd
 	  touch /etc/ntpd.conf
 	  {
