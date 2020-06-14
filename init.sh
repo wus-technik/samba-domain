@@ -57,7 +57,7 @@ appSetup () {
 	} >> /etc/krb5.conf
 	fi
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
-	if [[ ! -f /etc/samba/external/smb.conf ]]; then
+	if [[ ! -f /etc/samba/external/smb.conf && JOINMEMBER == false ]]; then
 		mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
 		if [[ ${JOINDC,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
@@ -66,17 +66,22 @@ appSetup () {
 				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL --site="${JOINSITE}"
 			fi
 		fi
-		if [[ ${JOINMEMBER,,}  == "false" && ${JOINDC,,} == "false" ]]; then
+		if [[ ${JOINDC,,} == "false" && ${JOINMEMBER,,} == "false" ]]; then
 			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
-			
+
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
 				samba-tool domain passwordsettings set --complexity=off
 				samba-tool domain passwordsettings set --history-length=0
 				samba-tool domain passwordsettings set --min-pwd-age=0
 				samba-tool domain passwordsettings set --max-pwd-age=0
 			fi
-		else
-			sed -i "/\[global\]/a \
+		fi
+		
+		if [[ ${JOINMEMBER,,} == "true" ]]; then
+			if [ ! -f /etc/samba/smb.conf ]; then
+			echo "[global]" >> /etc/samba/smb.conf
+			fi
+		sed -i "/\[global\]/a \
 security = ADS\\n\
 idmap_ldb:use rfc2307 = yes\\n\
 idmap config * : backend = tdb\\n\
@@ -97,11 +102,11 @@ dedicated keytab file = /etc/krb5.keytab\\n\
 #kerberos method = secrets and keytab\\n\
 kerberos method = dedicated keytab
 store dos attributes = yes\
-			" /etc/samba/smb.conf
+		" /etc/samba/smb.conf
 		
-			#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
-			echo "!root = SAMDOM\Administrator SAMDOM\administrator" > /etc/samba/user.map
-			sed -i "/\[global\]/a \
+		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
+		echo "!root = SAMDOM\Administrator SAMDOM\administrator" > /etc/samba/user.map
+		sed -i "/\[global\]/a \
 username map = /etc/samba/user.map\
 		" /etc/samba/smb.conf
 		fi
