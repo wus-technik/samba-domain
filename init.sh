@@ -172,7 +172,7 @@ winbind enum groups = yes\\n\
 		fi
 		
 		if [[ ${JOINMEMBER,,} == "true" ]]; then
-			net ads join -U administrator%${DOMAINPASS}
+		#	net ads join -U administrator%${DOMAINPASS}
 		fi
         #Drop privileges
 		#https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
