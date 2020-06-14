@@ -57,7 +57,7 @@ appSetup () {
 	} >> /etc/krb5.conf
 	fi
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
-	if [[ ! -f /etc/samba/external/smb.conf && JOINMEMBER == false ]]; then
+	if [[ ! -f /etc/samba/external/smb.conf ]]; then
 		mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
 		if [[ ${JOINDC,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
@@ -100,7 +100,7 @@ map acl inherit = yes\\n\
 #Creating Keytab on join\\n\
 dedicated keytab file = /etc/krb5.keytab\\n\
 #kerberos method = secrets and keytab\\n\
-kerberos method = dedicated keytab
+kerberos method = dedicated keytab\\n\
 store dos attributes = yes\
 		" /etc/samba/smb.conf
 		
