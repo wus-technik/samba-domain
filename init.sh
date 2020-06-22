@@ -8,8 +8,7 @@ appSetup () {
 	# Set variables
 	DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
 	DOMAINPASS=${DOMAINPASS:-youshouldsetapassword}
-	JOINDC=${JOINDC:-false}
-	JOINMEMBER=${JOINMEMBER:-false}
+	JOIN=${JOIN:-false}
 	JOINSITE=${JOINSITE:-NONE}
 	MULTISITE=${MULTISITE:-false}
 	NOCOMPLEXITY=${NOCOMPLEXITY:-false}
@@ -59,14 +58,13 @@ appSetup () {
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
 	if [[ ! -f /etc/samba/external/smb.conf ]]; then
 		mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
-		if [[ ${JOINDC,,} == "true" ]]; then
+		if [[ ${JOIN,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
 				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL
 			else
 				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL --site="${JOINSITE}"
 			fi
-		fi
-		if [[ ${JOINDC,,} == "false" && ${JOINMEMBER,,} == "false" ]]; then
+		else
 			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
 
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
@@ -77,39 +75,39 @@ appSetup () {
 			fi
 		fi
 		
-		if [[ ${JOINMEMBER,,} == "true" ]]; then
-			if [ ! -f /etc/samba/smb.conf ]; then
-			echo "[global]" >> /etc/samba/smb.conf
-			fi
-		sed -i "/\[global\]/a \
-security = ADS\\n\
-idmap_ldb:use rfc2307 = yes\\n\
-idmap config * : backend = tdb\\n\
-idmap config * : range = 1000000-1999999\\n\
-idmap config ${URDOMAIN} : backend = ad\\n\
-idmap config ${URDOMAIN} : range = 2000000-2999999\\n\
-idmap config ${URDOMAIN} : schema_mode = rfc2307\\n\
-idmap config ${URDOMAIN} : unix_nss_info = yes\\n\
+#		if [[ ${JOINMEMBER,,} == "true" ]]; then
+#			if [ ! -f /etc/samba/smb.conf ]; then
+#			echo "[global]" >> /etc/samba/smb.conf
+#			fi
+#		sed -i "/\[global\]/a \
+#security = ADS\\n\
+#idmap_ldb:use rfc2307 = yes\\n\
+#idmap config * : backend = tdb\\n\
+#idmap config * : range = 1000000-1999999\\n\
+#idmap config ${URDOMAIN} : backend = ad\\n\
+#idmap config ${URDOMAIN} : range = 2000000-2999999\\n\
+#idmap config ${URDOMAIN} : schema_mode = rfc2307\\n\
+#idmap config ${URDOMAIN} : unix_nss_info = yes\\n\
 #idmap config ${URDOMAIN} : unix_primary_group = yes\\n\
 #Without it your kerberos tickets will expire and not be renewed\\n\
 #winbind refresh tickets = Yes\\n\
 #If you do not want to enter the domain set in 'workgroup =' during login etc (just 'username' instead of DOMAIN\username)\\n\
-winbind use default domain = yes\\n\
-vfs objects = acl_xattr\\n\
-map acl inherit = yes\\n\
+#winbind use default domain = yes\\n\
+#vfs objects = acl_xattr\\n\
+#map acl inherit = yes\\n\
 #Creating Keytab on join\\n\
-dedicated keytab file = /etc/krb5.keytab\\n\
+#dedicated keytab file = /etc/krb5.keytab\\n\
 #kerberos method = secrets and keytab\\n\
-kerberos method = dedicated keytab\\n\
-store dos attributes = yes\
-		" /etc/samba/smb.conf
+#kerberos method = dedicated keytab\\n\
+#store dos attributes = yes\
+#		" /etc/samba/smb.conf
 		
 		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
-		echo "!root = SAMDOM\Administrator SAMDOM\administrator" > /etc/samba/user.map
-		sed -i "/\[global\]/a \
-username map = /etc/samba/user.map\
-		" /etc/samba/smb.conf
-		fi
+#		echo "!root = SAMDOM\Administrator SAMDOM\administrator" > /etc/samba/user.map
+#		sed -i "/\[global\]/a \
+#username map = /etc/samba/user.map\
+#		" /etc/samba/smb.conf
+#		fi
 
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
@@ -118,14 +116,14 @@ username map = /etc/samba/user.map\
 		fi
 		
 		if [[ ${TLS,,} == "true" ]]; then
-		openssl dhparam -out /var/lib/samba/private/tls/dh.key 2048 
+#		openssl dhparam -out /var/lib/samba/private/tls/dh.key 2048 
 		sed -i "/\[global\]/a \
 tls enabled  = yes\\n\
 tls keyfile  = /var/lib/samba/private/tls/key.pem\\n\
 tls certfile = /var/lib/samba/private/tls/cert.pem\\n\
 #tls cafile   = /var/lib/samba/private/tls/chain.pem\\n\
 tls cafile   = /var/lib/samba/private/tls/ca.pem\\n\
-tls dh params file = /var/lib/samba/private/tls/dh.key\\n\
+#tls dh params file = /var/lib/samba/private/tls/dh.key\\n\
 #tls crlfile   = /etc/samba/tls/crl.pem\\n\
 #tls verify peer = ca_and_name\
 		" /etc/samba/smb.conf
@@ -170,10 +168,7 @@ winbind enum groups = yes\\n\
 		sed -i "s,hosts:.*,hosts:          files dns,g" "/etc/nsswitch.conf"
 		sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
 		fi
-		
-		if [[ ${JOINMEMBER,,} == "true" ]]; then
-			net ads join -U administrator%${DOMAINPASS}
-		fi
+
         #Drop privileges
 		#https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
          
