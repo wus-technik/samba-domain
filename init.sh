@@ -140,16 +140,14 @@ client lanman auth = no\
 		" /etc/samba/smb.conf
 		fi
 		sed -i "/\[global\]/a \
-#wins support = yes\\n\
+wins support = yes\\n\
 # Template settings for login shell and home directory\\n\
 template shell = /bin/bash\\n\
 template homedir = /home/%U\\n\
 load printers = no\\n\
 printing = bsd\\n\
 printcap name = /dev/null\\n\
-disable spoolss = yes\\n\
-disable netbios = yes\\n\
-smb ports = 445\
+disable spoolss = yes\
 		" /etc/samba/smb.conf
 		
 		if [[ ${LOGS,,} == "true" ]]; then
