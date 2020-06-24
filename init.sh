@@ -74,14 +74,7 @@ appSetup () {
 				samba-tool domain passwordsettings set --max-pwd-age=0
 			fi
 		fi
-		
-		
-		
-		if [[ -d /var/lib/samba/winbindd_privileged/ ]]; then
-		  chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
-		  chmod 0750 /var/lib/samba/winbindd_privileged
-		fi
-		
+
 #		if [[ ${JOINMEMBER,,} == "true" ]]; then
 #			if [ ! -f /etc/samba/smb.conf ]; then
 #			echo "[global]" >> /etc/samba/smb.conf
@@ -235,6 +228,7 @@ password = dummy\
 	  echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
+
 	if [[ ${JOINDC,,} == "true" ]]; then
 	  # Set up ntpd
 	  touch /etc/ntpd.conf
@@ -286,7 +280,16 @@ password = dummy\
 	  chmod 750 /var/lib/samba/ntp_signd/
     fi
 
-	appStart	
+	if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
+	  mkdir /var/lib/samba/winbindd_privileged/
+	  chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
+	  chmod 0750 /var/lib/samba/winbindd_privileged
+	else
+	  chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
+	  chmod 0750 /var/lib/samba/winbindd_privileged
+	fi
+
+	appStart
 }
 
 appStart () {
