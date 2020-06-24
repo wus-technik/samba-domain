@@ -75,6 +75,13 @@ appSetup () {
 			fi
 		fi
 		
+		
+		
+		if [[ -d /var/lib/samba/winbindd_privileged/ ]]; then
+		  chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
+		  chmod 0750 /var/lib/samba/winbindd_privileged
+		fi
+		
 #		if [[ ${JOINMEMBER,,} == "true" ]]; then
 #			if [ ! -f /etc/samba/smb.conf ]; then
 #			echo "[global]" >> /etc/samba/smb.conf
@@ -108,7 +115,10 @@ appSetup () {
 #username map = /etc/samba/user.map\
 #		" /etc/samba/smb.conf
 #		fi
-
+  if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
+  mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
+  mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
+  fi
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
 				\\\tdns forwarder = ${DNSFORWARDER}\
@@ -132,17 +142,21 @@ tls cafile   = /var/lib/samba/private/tls/ca.pem\\n\
 		if [[ ${FREERADIUS,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
 ntlm auth = mschapv2-and-ntlmv2-only\
+lanman auth = no\
+client lanman auth = no\
 		" /etc/samba/smb.conf
 		fi
 		sed -i "/\[global\]/a \
-wins support = yes\\n\
+#wins support = yes\\n\
 # Template settings for login shell and home directory\\n\
 template shell = /bin/bash\\n\
 template homedir = /home/%U\\n\
 load printers = no\\n\
 printing = bsd\\n\
 printcap name = /dev/null\\n\
-disable spoolss = yes\
+disable spoolss = yes\\n\
+disable netbios = yes\\n\
+smb ports = 445\
 		" /etc/samba/smb.conf
 		
 		if [[ ${LOGS,,} == "true" ]]; then
@@ -221,7 +235,7 @@ password = dummy\
 	  echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
-	if [[ ${JOINDC,,} == "true" || ${JOINMEMBER,,} == "true" ]]; then
+	if [[ ${JOINDC,,} == "true" ]]; then
 	  # Set up ntpd
 	  touch /etc/ntpd.conf
 	  {
