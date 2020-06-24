@@ -214,7 +214,7 @@ password=dummy\
 	sed -i "/\[supervisorctl\]/a \
 username = dummy\\n\
 password = dummy\
-	" /etc/supervisor/supervisord.conf	
+	" /etc/supervisor/supervisord.conf
 
 	if [[ ${MULTISITE,,} == "true" ]]; then
 	  if [[ -n $VPNPID ]]; then
