@@ -27,7 +27,7 @@ appSetup () {
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	FREERADIUS=${FREERADIUS:-false}
 	DOMAINCONTROLLER=${DOMAINCONTROLLER:-"DC01"}
-	DEBUG=${DEBUG:-true}
+	DEBUG=${DEBUG:-false}
 	DEBUGLEVEL=${DEBUGLEVEL:-1}
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
@@ -272,10 +272,12 @@ password = dummy\
 	  chmod 0750 /var/lib/samba/winbindd_privileged
 	fi
 
-	# Let Domain Admins administrate shares
-	#net rpc rights grant "$UDOMAIN\Domain Admins" SeDiskOperatorPrivilege -U"$UDOMAIN\administrator" ${DEBUG_OPTION}
+	appFirstStart
+}
 
-	appStart
+appFirstStart () {
+	/usr/bin/supervisord -c "/etc/supervisor/supervisord.conf"
+	net rpc rights grant "$UDOMAIN\Domain Admins" SeDiskOperatorPrivilege -U"$UDOMAIN\administrator" ${DEBUG_OPTION}
 }
 
 appStart () {
