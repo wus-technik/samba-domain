@@ -3,6 +3,11 @@
 #set -e
 set -x
 
+#Todo:
+#Keytab erzeugen:  net ads keytab create ${SAMBA_DEBUG_OPTION}
+#Drop privileges
+#https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
+
 appSetup () {
 
 	# Set variables
@@ -20,7 +25,7 @@ appSetup () {
 	LOGS=${LOGS:-false}
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	FREERADIUS=${FREERADIUS:-false}
-	
+	DOMAINCONTROLLER=${DOMAINCONTROLLER:-""}
 	DEBUG=${DEBUG:-true}
 	
 	LDOMAIN=${DOMAIN,,} #alllowercase
@@ -35,38 +40,42 @@ appSetup () {
 		sleep 30
 	fi
 
-        # Set host ip option
-        if [[ "$HOSTIP" != "NONE" ]]; then
+	# Set host ip option
+	if [[ "$HOSTIP" != "NONE" ]]; then
 		HOSTIP_OPTION="--host-ip=$HOSTIP"
-        else
+	else
 		HOSTIP_OPTION=""
-        fi
-		if [[ "$DEBUG" == "true" ]]; then
-		DEBUG_OPTION="-d 1"
-        else
-		DEBUG_OPTION=""
-        fi
-		
+	fi
+	if [[ "$DEBUG" == "true" ]]; then
+		SAMBA_DEBUG_OPTION="-d 1"
+		NTP_DEBUG_OPTION="-D 1"
+	else
+		SAMBA_DEBUG_OPTION=""
+		NTP_DEBUG_OPTION=""
+	fi
+
 	if [[ ! -d /etc/samba/external/ ]]; then
 		mkdir /etc/samba/external
 	fi
-	
+
 	# Set up samba
 	mv /etc/krb5.conf /etc/krb5.conf.orig
 	{
-	echo "[libdefaults]" > /etc/krb5.conf
-	echo "    dns_lookup_realm = false"
-	echo "    dns_lookup_kdc = true"
-	echo "    default_realm = ${UDOMAIN}"
+		echo "[libdefaults]" > /etc/krb5.conf
+		echo "    dns_lookup_realm = false"
+		echo "    dns_lookup_kdc = true"
+		echo "    default_realm = ${UDOMAIN}"
 	} >> /etc/krb5.conf
+
 	if [[ ${LOGS,,} == "true" ]]; then
 	{
-	echo "[logging]"  >> /etc/krb5.conf
-	echo "    default = FILE:/var/log/samba/krb5libs.log"
-	echo "    kdc = FILE:/var/log/samba/krb5kdc.log"
-	echo "    admin_server = FILE:/var/log/samba/kadmind.log"
+		echo "[logging]"  >> /etc/krb5.conf
+		echo "    default = FILE:/var/log/samba/krb5libs.log"
+		echo "    kdc = FILE:/var/log/samba/krb5kdc.log"
+		echo "    admin_server = FILE:/var/log/samba/kadmind.log"
 	} >> /etc/krb5.conf
 	fi
+
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
 	if [[ ! -f /etc/samba/external/smb.conf ]]; then
 		if [[ -f /etc/samba/smb.conf ]]; then
@@ -75,12 +84,12 @@ appSetup () {
 
 		if [[ ${JOIN,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
-				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL ${DEBUG_OPTION}
+				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL ${SAMBA_DEBUG_OPTION}
 			else
-				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL --site=${JOINSITE} ${DEBUG_OPTION}
+				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL --site=${JOINSITE} ${SAMBA_DEBUG_OPTION}
 			fi
 		else
-			samba-tool domain provision --use-rfc2307 --domain=${URDOMAIN} --realm=${UDOMAIN} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass=${DOMAINPASS} ${HOSTIP_OPTION} ${DEBUG_OPTION}
+			samba-tool domain provision --use-rfc2307 --domain=${URDOMAIN} --realm=${UDOMAIN} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass=${DOMAINPASS} ${HOSTIP_OPTION} ${SAMBA_DEBUG_OPTION}
 			
 			if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
 				mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
@@ -89,10 +98,10 @@ appSetup () {
 		fi
 		
 		if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
-			samba-tool domain passwordsettings set --complexity=off ${DEBUG_OPTION}
-			samba-tool domain passwordsettings set --history-length=0 ${DEBUG_OPTION}
-			samba-tool domain passwordsettings set --min-pwd-age=0 ${DEBUG_OPTION}
-			samba-tool domain passwordsettings set --max-pwd-age=0 ${DEBUG_OPTION}
+			samba-tool domain passwordsettings set --complexity=off ${SAMBA_DEBUG_OPTION}
+			samba-tool domain passwordsettings set --history-length=0 ${SAMBA_DEBUG_OPTION}
+			samba-tool domain passwordsettings set --min-pwd-age=0 ${SAMBA_DEBUG_OPTION}
+			samba-tool domain passwordsettings set --max-pwd-age=0 ${SAMBA_DEBUG_OPTION}
 		fi
 		
 		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
@@ -101,9 +110,7 @@ appSetup () {
 		sed -i "/\[global\]/a \
 username map = /etc/samba/user.map\
 		" /etc/samba/smb.conf
-		net ads keytab create ${DEBUG_OPTION}
 		fi
-
 
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
@@ -167,10 +174,6 @@ winbind enum groups = yes\\n\
 		sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
 		fi
 
-        #Drop privileges
-		#https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
-         
-         
 		# Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 		cp -f /etc/samba/smb.conf /etc/samba/external/smb.conf
 	else
