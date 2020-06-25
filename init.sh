@@ -25,7 +25,7 @@ appSetup () {
 	LOGS=${LOGS:-false}
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	FREERADIUS=${FREERADIUS:-false}
-	DOMAINCONTROLLER=${DOMAINCONTROLLER:-""}
+	DOMAINCONTROLLER=${DOMAINCONTROLLER:-"DC01 DC02"}
 	DEBUG=${DEBUG:-true}
 	
 	LDOMAIN=${DOMAIN,,} #alllowercase
@@ -48,10 +48,12 @@ appSetup () {
 	fi
 	if [[ "$DEBUG" == "true" ]]; then
 		SAMBA_DEBUG_OPTION="-d 1"
+		SAMBADAEMON_DEBUG_OPTION="--debug-stderr -d 1"
 		NTP_DEBUG_OPTION="-D 1"
 	else
 		SAMBA_DEBUG_OPTION=""
 		NTP_DEBUG_OPTION=""
+		SAMBADAEMON_DEBUG_OPTION=""
 	fi
 
 	if [[ ! -d /etc/samba/external/ ]]; then
@@ -95,15 +97,15 @@ appSetup () {
 				mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
 				mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
 			fi
+
+			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
+				samba-tool domain passwordsettings set --complexity=off ${SAMBA_DEBUG_OPTION}
+				samba-tool domain passwordsettings set --history-length=0 ${SAMBA_DEBUG_OPTION}
+				samba-tool domain passwordsettings set --min-pwd-age=0 ${SAMBA_DEBUG_OPTION}
+				samba-tool domain passwordsettings set --max-pwd-age=0 ${SAMBA_DEBUG_OPTION}
+			fi
 		fi
-		
-		if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
-			samba-tool domain passwordsettings set --complexity=off ${SAMBA_DEBUG_OPTION}
-			samba-tool domain passwordsettings set --history-length=0 ${SAMBA_DEBUG_OPTION}
-			samba-tool domain passwordsettings set --min-pwd-age=0 ${SAMBA_DEBUG_OPTION}
-			samba-tool domain passwordsettings set --max-pwd-age=0 ${SAMBA_DEBUG_OPTION}
-		fi
-		
+
 		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
 		if [[ ! -f /etc/samba/user.map ]]; then
 		echo '!'"root = ${DOMAIN}\\Administrator" > /etc/samba/user.map
@@ -189,13 +191,13 @@ winbind enum groups = yes\\n\
 	echo "user=root"
 	echo ""
 	echo "[program:samba]"
-	echo "command=/usr/sbin/samba -F ${DEBUG_OPTION}"
+	echo "command=/usr/sbin/samba -F ${SAMBADAEMON_DEBUG_OPTION}"
 	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
 	echo "stdout_logfile_backups=0"
 	echo ""
 	echo "[program:ntpd]"
-	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n ${DEBUG_OPTION}"
+	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n ${NTP_DEBUG_OPTION}"
 	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
 	echo "stdout_logfile_backups=0"
@@ -219,7 +221,7 @@ password = dummy\
 	{
       echo ""
 	  echo "[program:openvpn]"
-	  echo "command=/usr/sbin/openvpn --config /docker.ovpn"		        
+	  echo "command=/usr/sbin/openvpn --config /docker.ovpn"
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
 
