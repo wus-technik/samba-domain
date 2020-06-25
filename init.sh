@@ -7,6 +7,7 @@ appSetup () {
 
 	# Set variables
 	DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
+	DOMAINUSER=${DOMAINUSER:-Administrator}
 	DOMAINPASS=${DOMAINPASS:-youshouldsetapassword}
 	JOIN=${JOIN:-false}
 	JOINSITE=${JOINSITE:-NONE}
@@ -19,6 +20,8 @@ appSetup () {
 	LOGS=${LOGS:-false}
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	FREERADIUS=${FREERADIUS:-false}
+	
+	DEBUG=${DEBUG:-true}
 	
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
@@ -38,7 +41,16 @@ appSetup () {
         else
 		HOSTIP_OPTION=""
         fi
-
+		if [[ "$DEBUG" == "true" ]]; then
+		DEBUG_OPTION="-d 1"
+        else
+		DEBUG_OPTION=""
+        fi
+		
+	if [[ ! -d /etc/samba/external/ ]]; then
+		mkdir /etc/samba/external
+	fi
+	
 	# Set up samba
 	mv /etc/krb5.conf /etc/krb5.conf.orig
 	{
@@ -57,61 +69,42 @@ appSetup () {
 	fi
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
 	if [[ ! -f /etc/samba/external/smb.conf ]]; then
-		mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
+		if [[ -f /etc/samba/smb.conf ]]; then
+			mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
+		fi
+		
+		net ads keytab create
 		if [[ ${JOIN,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
-				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL
+				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL ${DEBUG_OPTION}
 			else
-				samba-tool domain join "${LDOMAIN}" DC -U"${URDOMAIN}\administrator" --password="${DOMAINPASS}" --dns-backend=SAMBA_INTERNAL --site="${JOINSITE}"
+				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL --site=${JOINSITE} ${DEBUG_OPTION}
 			fi
 		else
-			samba-tool domain provision --use-rfc2307 --domain="${URDOMAIN}" --realm="${UDOMAIN}" --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" "${HOSTIP_OPTION}"
-
-			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
-				samba-tool domain passwordsettings set --complexity=off
-				samba-tool domain passwordsettings set --history-length=0
-				samba-tool domain passwordsettings set --min-pwd-age=0
-				samba-tool domain passwordsettings set --max-pwd-age=0
+			samba-tool domain provision --use-rfc2307 --domain=${URDOMAIN} --realm=${UDOMAIN} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass=${DOMAINPASS} ${HOSTIP_OPTION} ${DEBUG_OPTION}
+			
+			if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
+				mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
+				mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
 			fi
 		fi
-
-#		if [[ ${JOINMEMBER,,} == "true" ]]; then
-#			if [ ! -f /etc/samba/smb.conf ]; then
-#			echo "[global]" >> /etc/samba/smb.conf
-#			fi
-#		sed -i "/\[global\]/a \
-#security = ADS\\n\
-#idmap_ldb:use rfc2307 = yes\\n\
-#idmap config * : backend = tdb\\n\
-#idmap config * : range = 1000000-1999999\\n\
-#idmap config ${URDOMAIN} : backend = ad\\n\
-#idmap config ${URDOMAIN} : range = 2000000-2999999\\n\
-#idmap config ${URDOMAIN} : schema_mode = rfc2307\\n\
-#idmap config ${URDOMAIN} : unix_nss_info = yes\\n\
-#idmap config ${URDOMAIN} : unix_primary_group = yes\\n\
-#Without it your kerberos tickets will expire and not be renewed\\n\
-#winbind refresh tickets = Yes\\n\
-#If you do not want to enter the domain set in 'workgroup =' during login etc (just 'username' instead of DOMAIN\username)\\n\
-#winbind use default domain = yes\\n\
-#vfs objects = acl_xattr\\n\
-#map acl inherit = yes\\n\
-#Creating Keytab on join\\n\
-#dedicated keytab file = /etc/krb5.keytab\\n\
-#kerberos method = secrets and keytab\\n\
-#kerberos method = dedicated keytab\\n\
-#store dos attributes = yes\
-#		" /etc/samba/smb.conf
 		
+		if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
+			samba-tool domain passwordsettings set --complexity=off ${DEBUG_OPTION}
+			samba-tool domain passwordsettings set --history-length=0 ${DEBUG_OPTION}
+			samba-tool domain passwordsettings set --min-pwd-age=0 ${DEBUG_OPTION}
+			samba-tool domain passwordsettings set --max-pwd-age=0 ${DEBUG_OPTION}
+		fi
 		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
-#		echo "!root = SAMDOM\Administrator SAMDOM\administrator" > /etc/samba/user.map
-#		sed -i "/\[global\]/a \
-#username map = /etc/samba/user.map\
-#		" /etc/samba/smb.conf
-#		fi
-  if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
-  mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
-  mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
-  fi
+		if [[ ! -f /etc/samba/user.map ]]; then
+		echo '!'"root = ${DOMAIN}\\Administrator" > /etc/samba/user.map
+		sed -i "/\[global\]/a \
+username map = /etc/samba/user.map\
+		" /etc/samba/smb.conf
+		#net ads keytab create ${DEBUG_OPTION}
+		fi
+
+
 		if [[ $DNSFORWARDER != "NONE" ]]; then
 			sed -i "/\[global\]/a \
 				\\\tdns forwarder = ${DNSFORWARDER}\
@@ -193,13 +186,13 @@ winbind enum groups = yes\\n\
 	echo "user=root"
 	echo ""
 	echo "[program:samba]"
-	echo "command=/usr/sbin/samba -F"
+	echo "command=/usr/sbin/samba -F ${DEBUG_OPTION}"
 	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
 	echo "stdout_logfile_backups=0"
 	echo ""
 	echo "[program:ntpd]"
-	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n"
+	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n ${DEBUG_OPTION}"
 	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
 	echo "stdout_logfile_backups=0"
@@ -286,6 +279,9 @@ password = dummy\
 	  chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
 	  chmod 0750 /var/lib/samba/winbindd_privileged
 	fi
+
+	# Let Domain Admins administrate shares
+	#net rpc rights grant "$UDOMAIN\Domain Admins" SeDiskOperatorPrivilege -U"$UDOMAIN\administrator" ${DEBUG_OPTION}
 
 	appStart
 }
