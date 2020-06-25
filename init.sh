@@ -25,11 +25,11 @@ appSetup () {
 	LOGS=${LOGS:-false}
 
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
-	FREERADIUS=${FREERADIUS:-false}
-	DOMAINCONTROLLER=${DOMAINCONTROLLER:-"DC01"}
+	MSCHAPV2=${MSCHAPV2:-false}
 	DEBUG=${DEBUG:-false}
-	DEBUGLEVEL=${DEBUGLEVEL:-1}
-	LDOMAIN=${DOMAIN,,} #alllowercase
+	DEBUGLEVEL=${DEBUGLEVEL:-0}
+
+		LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
 	URDOMAIN=${UDOMAIN%%.*} #trim
 
@@ -135,7 +135,7 @@ tls cafile   = /var/lib/samba/private/tls/ca.pem\\n\
 		" /etc/samba/smb.conf
 
 		fi
-		if [[ ${FREERADIUS,,} == "true" ]]; then
+		if [[ ${MSCHAPV2,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
 ntlm auth = mschapv2-and-ntlmv2-only\
 lanman auth = no\
