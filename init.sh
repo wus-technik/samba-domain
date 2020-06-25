@@ -4,7 +4,7 @@
 set -x
 
 #Todo:
-#Keytab erzeugen:  net ads keytab create ${SAMBA_DEBUG_OPTION}
+#Keytab erzeugen:  net ads keytab create ${SAMBA_DEBUG_OPTION} und kerberos method = secrets and keytab
 #Drop privileges
 #https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
 
@@ -23,11 +23,12 @@ appSetup () {
 	HOSTIP=${HOSTIP:-NONE}
 	TLS=${TLS:-true}
 	LOGS=${LOGS:-false}
+
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	FREERADIUS=${FREERADIUS:-false}
-	DOMAINCONTROLLER=${DOMAINCONTROLLER:-"DC01 DC02"}
+	DOMAINCONTROLLER=${DOMAINCONTROLLER:-"DC01"}
 	DEBUG=${DEBUG:-true}
-	
+	DEBUGLEVEL=${DEBUGLEVEL:-true}
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
 	URDOMAIN=${UDOMAIN%%.*} #trim
@@ -47,9 +48,9 @@ appSetup () {
 		HOSTIP_OPTION=""
 	fi
 	if [[ "$DEBUG" == "true" ]]; then
-		SAMBA_DEBUG_OPTION="-d 1"
-		SAMBADAEMON_DEBUG_OPTION="--debug-stderr -d 1"
-		NTP_DEBUG_OPTION="-D 1"
+		SAMBA_DEBUG_OPTION="-d $DEBUGLEVEL"
+		SAMBADAEMON_DEBUG_OPTION="--debug-stderr -d $DEBUGLEVEL"
+		NTP_DEBUG_OPTION="-D $DEBUGLEVEL"
 	else
 		SAMBA_DEBUG_OPTION=""
 		NTP_DEBUG_OPTION=""
@@ -156,7 +157,7 @@ disable spoolss = yes\
 			sed -i "/\[global\]/a \
 log file = /var/log/samba/%m.log\\n\
 max log size = 10000\\n\
-log level = 3\
+log level = 1\
 			" /etc/samba/smb.conf
 		fi
 		if [[ ${INSECURELDAP,,} == "true" ]]; then
@@ -197,7 +198,7 @@ winbind enum groups = yes\\n\
 	echo "stdout_logfile_backups=0"
 	echo ""
 	echo "[program:ntpd]"
-	echo "command=/usr/sbin/ntpd -c /etc/ntpd.conf -n ${NTP_DEBUG_OPTION}"
+	echo "command=/usr/sbin/ntpd -c /etc/ntp.conf -n ${NTP_DEBUG_OPTION}"
 	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
 	echo "stdout_logfile_backups=0"
@@ -224,58 +225,43 @@ password = dummy\
 	  echo "command=/usr/sbin/openvpn --config /docker.ovpn"
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	fi
-
-	if [[ ${JOINDC,,} == "true" ]]; then
-	  # Set up ntpd
-	  touch /etc/ntpd.conf
-	  {
-	  echo "# Local clock. Note that is not the localhost address!"
-	  echo "#server 127.127.1.0"
-	  echo "#fudge  127.127.1.0 stratum 10"
- 
+	if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
+		touch /var/lib/ntp/ntp.drift
+	fi
+	
+	touch /etc/ntp.conf
+	{
 	  echo "# Where to retrieve the time from"
-	  echo "server DC01.${LDOMAIN}    iburst prefer"
-	  echo "server DC02.${LDOMAIN}    iburst"
-
-	  echo "driftfile /var/lib/ntp/ntp.drift"
-	  echo "logfile   /var/log/ntp"
-
-	  echo "# Access control"
-	  echo "# Default restriction: Disallow everything"
-	  echo "restrict default ignore"
-
-	  echo "# No restrictions for localhost"
-	  echo "restrict 127.0.0.1"
-
-	  echo "# Enable the time sources only to only provide time to this host"
-	  echo "restrict DC01.${LDOMAIN}  mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo "restrict DC02.${LDOMAIN}  mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo ""
-	  echo "tinker panic 0"
-	  } >> /etc/ntpd.conf
-	else
-	  {
-	  echo "# Local clock. Note that is not the localhost address!"
-	  echo "#server 127.127.1.0"
-	  echo "#fudge  127.127.1.0 stratum 10"
 	  echo "server 0.pool.ntp.org     iburst prefer"
 	  echo "server 1.pool.ntp.org     iburst prefer"
 	  echo "server 2.pool.ntp.org     iburst prefer"
+	  echo ""
 	  echo "driftfile       /var/lib/ntp/ntp.drift"
 	  echo "logfile         /var/log/ntp"
 	  echo "ntpsigndsocket  /var/lib/samba/ntp_signd/"
-	  echo "restrict default kod nomodify notrap nopeer mssntp"
+	  echo ""
+	  echo "# Access control"
+	  echo "# Default restriction: Allow clients only to query the time"
+	  echo "restrict -4 default kod limited nomodify notrap nopeer mssntp"
+	  echo "restrict -6 default kod limited nomodify notrap nopeer mssntp"
+	  echo ""
+	  echo "# No restrictions for localhost"
 	  echo "restrict 127.0.0.1"
+	  echo "restrict -6 ::1"
+	  echo ""
+	  echo "# Enable the time sources to only provide time to this host"
 	  echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
 	  echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
 	  echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  }  >> /etc/ntpd.conf
+	  echo ""
+	  echo "# Don't panic if time is far off - ideal for VM or container"
+	  echo "tinker panic 0"
+	}  >> /etc/ntp.conf
 
 	  # Own socket
 	  mkdir -p /var/lib/samba/ntp_signd/
 	  chown root:ntp /var/lib/samba/ntp_signd/
 	  chmod 750 /var/lib/samba/ntp_signd/
-    fi
 
 	if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
 	  mkdir /var/lib/samba/winbindd_privileged/
