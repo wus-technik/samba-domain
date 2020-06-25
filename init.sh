@@ -72,8 +72,7 @@ appSetup () {
 		if [[ -f /etc/samba/smb.conf ]]; then
 			mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
 		fi
-		
-		net ads keytab create
+
 		if [[ ${JOIN,,} == "true" ]]; then
 			if [[ ${JOINSITE} == "NONE" ]]; then
 				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL ${DEBUG_OPTION}
@@ -95,13 +94,14 @@ appSetup () {
 			samba-tool domain passwordsettings set --min-pwd-age=0 ${DEBUG_OPTION}
 			samba-tool domain passwordsettings set --max-pwd-age=0 ${DEBUG_OPTION}
 		fi
+		
 		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
 		if [[ ! -f /etc/samba/user.map ]]; then
 		echo '!'"root = ${DOMAIN}\\Administrator" > /etc/samba/user.map
 		sed -i "/\[global\]/a \
 username map = /etc/samba/user.map\
 		" /etc/samba/smb.conf
-		#net ads keytab create ${DEBUG_OPTION}
+		net ads keytab create ${DEBUG_OPTION}
 		fi
 
 
@@ -225,8 +225,8 @@ password = dummy\
 	  touch /etc/ntpd.conf
 	  {
 	  echo "# Local clock. Note that is not the localhost address!"
-	  echo "server 127.127.1.0"
-	  echo "fudge  127.127.1.0 stratum 10"
+	  echo "#server 127.127.1.0"
+	  echo "#fudge  127.127.1.0 stratum 10"
  
 	  echo "# Where to retrieve the time from"
 	  echo "server DC01.${LDOMAIN}    iburst prefer"
@@ -250,8 +250,9 @@ password = dummy\
 	  } >> /etc/ntpd.conf
 	else
 	  {
-	  echo "server 127.127.1.0"
-	  echo "fudge  127.127.1.0 stratum 10"
+	  echo "# Local clock. Note that is not the localhost address!"
+	  echo "#server 127.127.1.0"
+	  echo "#fudge  127.127.1.0 stratum 10"
 	  echo "server 0.pool.ntp.org     iburst prefer"
 	  echo "server 1.pool.ntp.org     iburst prefer"
 	  echo "server 2.pool.ntp.org     iburst prefer"
@@ -262,7 +263,7 @@ password = dummy\
 	  echo "restrict 127.0.0.1"
 	  echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
 	  echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"	        
+	  echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
 	  }  >> /etc/ntpd.conf
 
 	  # Own socket
