@@ -138,8 +138,8 @@ tls cafile   = /var/lib/samba/private/tls/ca.pem\\n\
 		fi
 		if [[ ${MSCHAPV2,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
-ntlm auth = mschapv2-and-ntlmv2-only\
-lanman auth = no\
+ntlm auth = mschapv2-and-ntlmv2-only\\n\
+lanman auth = no\\n\
 client lanman auth = no\
 		" /etc/samba/smb.conf
 		fi
