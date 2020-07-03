@@ -108,11 +108,12 @@ appSetup () {
 		fi
 
 		#Prevent https://wiki.samba.org/index.php/Samba_Member_Server_Troubleshooting => SeDiskOperatorPrivilege can't be set
-		if [[ ! -f /etc/samba/user.map ]]; then
+		if [ ! -f /etc/samba/user.map ]; then
 		echo '!'"root = ${DOMAIN}\\Administrator" > /etc/samba/user.map
 		sed -i "/\[global\]/a \
 username map = /etc/samba/user.map\
 		" /etc/samba/smb.conf
+		touch /etc/samba/user.map
 		fi
 
 		if [[ $DNSFORWARDER != "NONE" ]]; then
@@ -196,12 +197,14 @@ winbind enum groups = yes\\n\
 	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
 	echo "stdout_logfile_backups=0"
+	echo "priority=100"
 	echo ""
 	echo "[program:ntpd]"
 	echo "command=/usr/sbin/ntpd -c /etc/ntp.conf -n ${NTP_DEBUG_OPTION}"
 	echo "stdout_logfile=/dev/fd/1"
 	echo "stdout_logfile_maxbytes=0"
 	echo "stdout_logfile_backups=0"
+	echo "priority=10"
 	} >> /etc/supervisor/conf.d/supervisord.conf
 	
 	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
