@@ -24,9 +24,9 @@ appSetup () {
 	TLS=${TLS:-true}
 	LOGS=${LOGS:-false}
 	
-	SCHEMA_LAPS=${SCHEMA_LAPS:-false}
+	SCHEMA_LAPS=${SCHEMA_LAPS:-true}
 	RFC2307=${RFC2307:-true}
-	SCHEMA_SSHPUBKEY=${SCHEMA_SSHPUBKEY:-false}
+	SCHEMA_SSHPUBKEY=${SCHEMA_SSHPUBKEY:-true}
 
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	MSCHAPV2=${MSCHAPV2:-false}
@@ -38,9 +38,13 @@ appSetup () {
 	URDOMAIN=${UDOMAIN%%.*} #trim
 	
 	# Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
+	# IT does nothing on DCs as they shall not use idmap settings.
+	# Using the same Start and stop values on members however gets the RFC2307 attributs (NIS) rights
+	# idmap config {{ URDOMAIN }} : range = {{ IDMIN }}-{{ IDMAX }} 
 	IMAP_UID_START=${IMAP_UID_START:-10000}
 	IMAP_GID_START=${IMAP_GID_START:-10000}
-	
+	IMAP_UID_STOP=${IMAP_UID_START:-999999}
+	IMAP_GID_STOP=${IMAP_GID_START:-999999}
 	#DN for LDIF
 	LDAPDN=""
 	IFS='.'
@@ -185,6 +189,8 @@ appSetup () {
 			ldbadd -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/laps-1.ldif -U Administrator
 			ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/laps-2.ldif -U Administrator
 			fi
+			
+			
 
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
 				samba-tool domain passwordsettings set --complexity=off ${SAMBA_DEBUG_OPTION}
