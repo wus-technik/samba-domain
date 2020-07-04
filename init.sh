@@ -23,6 +23,7 @@ appSetup () {
 	HOSTIP=${HOSTIP:-NONE}
 	TLS=${TLS:-true}
 	LOGS=${LOGS:-false}
+	
 	SCHEMA_LAPS=${SCHEMA_LAPS:-false}
 	RFC2307=${RFC2307:-true}
 	SCHEMA_SSHPUBKEY=${SCHEMA_SSHPUBKEY:-false}
@@ -32,9 +33,20 @@ appSetup () {
 	DEBUG=${DEBUG:-false}
 	DEBUGLEVEL=${DEBUGLEVEL:-0}
 
-		LDOMAIN=${DOMAIN,,} #alllowercase
+	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
 	URDOMAIN=${UDOMAIN%%.*} #trim
+	
+	# Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
+	IMAP_UID_START=${IMAP_UID_START:-10000}
+	IMAP_GID_START=${IMAP_GID_START:-10000}
+	
+	#DN for LDIF
+	LDAPDN=""
+	IFS='.'
+	for dn in ${LDOMAIN}; do
+		LDAPDN="${LDAPDN},DC=$dn"
+	done
 
 	# If multi-site, we need to connect to the VPN before joining the domain
 	if [[ ${MULTISITE,,} == "true" ]]; then
@@ -107,6 +119,71 @@ appSetup () {
 			if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
 				mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
 				mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
+			fi
+			
+			if [[ "$RFC2307" == "true" ]]; then
+				GID_DOM_USER=$((IMAP_GID_START))
+				GID_DOM_ADMIN=$((IMAP_GID_START+1))
+				GID_DOM_COMPUTERS=$((IMAP_GID_START+2))
+				GID_DOM_DC=$((IMAP_GID_START+3))
+				GID_DOM_GUEST=$((IMAP_GID_START+4))
+				GID_SCHEMA=$((IMAP_GID_START+5))
+				GID_ENTERPRISE=$((IMAP_GID_START+6))
+				GID_GPO=$((IMAP_GID_START+7))
+				GID_RDOC=$((IMAP_GID_START+8))
+				GID_DNSUPDATE=$((IMAP_GID_START+9))
+				GID_ENTERPRISE_RDOC=$((IMAP_GID_START+10))
+				GID_DNSADMIN=$((IMAP_GID_START+11))
+				GID_ALLOWED_RDOC=$((IMAP_GID_START+12))
+				GID_DENIED_RDOC=$((IMAP_GID_START+13))
+				GID_RAS=$((IMAP_GID_START+14))
+				GID_CERT=$((IMAP_GID_START+15))
+				
+				UID_KRBTGT=$((IMAP_UID_START))
+				UID_GUEST=$((IMAP_UID_START+1))
+				UID_ADMINISTRATOR=$((IMAP_UID_START+2))
+				
+				#Next Counter value uesd by ADUC for NIS Extension GID and UID
+				IMAP_GID_END=$((IMAP_GID_START+16))
+				IMAP_UID_END=$((IMAP_UID_START+3))
+			
+				sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
+					-e "s:{{ NETBIOS }}:${URDOMAIN,,}:g" \
+					-e "s:{{ GID_DOM_USER }}:$GID_DOM_USER:g" \
+					-e "s:{{ GID_DOM_ADMIN }}:$GID_DOM_ADMIN:g" \
+					-e "s:{{ GID_DOM_COMPUTERS }}:$GID_DOM_COMPUTERS:g" \
+					-e "s:{{ GID_DOM_DC }}:$GID_DOM_DC:g" \
+					-e "s:{{ GID_DOM_GUEST }}:$GID_DOM_GUEST:g" \
+					-e "s:{{ GID_SCHEMA }}:$GID_SCHEMA:g" \
+					-e "s:{{ GID_ENTERPRISE }}:$GID_ENTERPRISE:g" \
+					-e "s:{{ GID_GPO }}:$GID_GPO:g" \
+					-e "s:{{ GID_RDOC }}:$GID_RDOC:g" \
+					-e "s:{{ GID_DNSUPDATE }}:$GID_DNSUPDATE:g" \
+					-e "s:{{ GID_ENTERPRISE_RDOC }}:$GID_ENTERPRISE_RDOC:g" \
+					-e "s:{{ GID_DNSADMIN }}:$GID_DNSADMIN:g" \
+					-e "s:{{ GID_ALLOWED_RDOC }}:$GID_ALLOWED_RDOC:g" \
+					-e "s:{{ GID_DENIED_RDOC }}:$GID_DENIED_RDOC:g" \
+					-e "s:{{ GID_RAS }}:$GID_RAS:g" \
+					-e "s:{{ GID_CERT }}:$GID_CERT:g" \
+					-e "s:{{ UID_KRBTGT }}:$UID_KRBTGT:g" \
+					-e "s:{{ UID_GUEST }}:$UID_GUEST:g" \
+					-e "s:{{ UID_ADMINISTRATOR }}:$UID_ADMINISTRATOR:g" \
+					-e "s:{{ IMAP_UID_END }}:$IMAP_UID_END:g" \
+					-e "s:{{ IMAP_GID_END }}:$IMAP_GID_END:g" \
+				/root/ldif/RFC_Domain_User_Group.ldif.j2 > /root/ldif/RFC_Domain_User_Group.ldif
+				
+				ldbmodify -H /var/lib/samba/private/sam.ldb /root/ldif/RFC_Domain_User_Group.ldif -U Administrator
+			fi
+			
+			if [[ "$SCHEMA_LAPS" == "true" ]]; then
+			sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
+			/root/ldif/laps-1.ldif.j2 > /root/ldif/laps-1.ldif
+
+			sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
+			/root/ldif/laps-2.ldif.j2 > /root/ldif/laps-2.ldif
+			
+			ldbadd -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/laps-1.ldif -U Administrator
+			ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/laps-2.ldif -U Administrator
 			fi
 
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then

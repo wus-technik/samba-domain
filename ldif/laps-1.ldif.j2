@@ -1,4 +1,4 @@
-dn: CN=ms-MCS-AdmPwd,CN=Schema,cn=configuration,dc=mydomain,dc=lan
+dn: CN=ms-MCS-AdmPwd,CN=Schema,cn=configuration {{ LDAPDN }}
 changetype: add
 objectClass: attributeSchema
 ldapDisplayName: ms-MCS-AdmPwd
@@ -13,7 +13,7 @@ searchFlags: 648
 isMemberOfPartialAttributeSet: FALSE
 showInAdvancedViewOnly: FALSE
 
-dn: CN=ms-MCS-AdmPwdExpirationTime,CN=Schema,cn=configuration,dc=mydomain,dc=lan
+dn: CN=ms-MCS-AdmPwdExpirationTime,CN=Schema,cn=configuration {{ LDAPDN }}
 changetype: add
 objectClass: attributeSchema
 ldapDisplayName: ms-MCS-AdmPwdExpirationTime

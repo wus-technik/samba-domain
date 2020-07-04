@@ -1,0 +1,228 @@
+#Group Add NFC2307
+
+dn: CN=Domain Users,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Domain Users
+-
+add: gidNumber
+gidNumber: {{ GID_DOM_USER }}
+
+dn: CN=Domain Admins,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Domain Admins
+-
+add: gidNumber
+gidNumber: {{ GID_DOM_ADMIN }}
+
+dn: CN=Domain Computers,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Domain Computers
+-
+add: gidNumber
+gidNumber: {{ GID_DOM_COMPUTERS }}
+
+dn: CN=Domain Controllers,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Domain Controllers
+-
+add: gidNumber
+gidNumber: {{ GID_DOM_DC }}
+
+dn: CN=Domain Guests,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Domain Guests
+-
+add: gidNumber
+gidNumber: {{ GID_DOM_GUEST }}
+
+dn: CN=Schema Admins,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Schema Admins
+-
+add: gidNumber
+gidNumber: {{ GID_SCHEMA }}
+
+dn: CN=Enterprise Admins,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Enterprise Admins
+-
+add: gidNumber
+gidNumber: {{ GID_ENTERPRISE }}
+
+dn: CN=Group Policy Creator Owners,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Group Policy Creator Owners
+-
+add: gidNumber
+gidNumber: {{ GID_GPO }}
+
+dn: CN=Read-only Domain Controllers,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Read-only Domain Controllers
+-
+add: gidNumber
+gidNumber: {{ GID_RDOC }}
+
+dn: CN=DnsUpdateProxy,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: DnsUpdateProxy
+-
+add: gidNumber
+gidNumber: {{ GID_DNSUPDATE }}
+
+dn: CN=Enterprise Read-only Domain Controllers,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Enterprise Read-only Domain Controllers
+-
+add: gidNumber
+gidNumber: {{ GID_ENTERPRISE_RDOC }}
+
+dn: CN=DnsAdmins,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: DnsAdmins
+-
+add: gidNumber
+gidNumber: {{ GID_DNSADMIN }}
+
+dn: CN=Allowed RODC Password Replication Group,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Allowed RODC Password Replication Group
+-
+add: gidNumber
+gidNumber: {{ GID_ALLOWED_RDOC }}
+
+dn: CN=Denied RODC Password Replication Group,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Denied RODC Password Replication Group
+-
+add: gidNumber
+gidNumber: {{ GID_DENIED_RDOC }}
+
+dn: CN=RAS and IAS Servers,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: RAS and IAS Servers
+-
+add: gidNumber
+gidNumber: {{ GID_RAS }}
+
+dn: CN=Cert Publishers,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Cert Publishers
+-
+add: gidNumber
+gidNumber: {{ GID_CERT }}
+
+#Users Add NFC2307
+dn: CN=krbtgt,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Cert Publishers
+-
+add: uidNumber
+uidNumber: {{ UID_KRBTGT }}
+
+dn: CN=Guest,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Cert Publishers
+-
+add: uidNumber
+uidNumber: {{ UID_GUEST }}
+-
+add: gidNumber
+gidNumber: {{ GID_DOM_GUEST }}
+
+dn: CN=Administrator,CN=Users {{ LDAPDN }}
+changetype: modify
+add: msSFU30NisDomain
+msSFU30NisDomain: {{ NETBIOS }}
+-
+add: msSFU30Name
+msSFU30Name: Cert Publishers
+-
+add: uidNumber
+uidNumber: {{ UID_ADMINISTRATOR }}
+-
+add: gidNumber
+gidNumber: {{ GID_DOM_ADMIN }}
+
+dn: CN={{ NETBIOS }},CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System {{ LDAPDN }}
+changetype: modify
+add: msSFU30Domains
+msSFU30Domains: {{ NETBIOS }}
+-
+add: msSFU30MaxUidNumber
+msSFU30MaxUidNumber: {{ IMAP_UID_END }}
+-
+add: msSFU30MaxGidNumber
+msSFU30MaxGidNumber: {{ IMAP_GID_END }}
