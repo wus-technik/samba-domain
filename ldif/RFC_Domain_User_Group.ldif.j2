@@ -218,11 +218,11 @@ gidNumber: {{ GID_DOM_ADMIN }}
 
 dn: CN={{ NETBIOS }},CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System {{ LDAPDN }}
 changetype: modify
-add: msSFU30Domains
+replace: msSFU30Domains
 msSFU30Domains: {{ NETBIOS }}
 -
-add: msSFU30MaxUidNumber
+replace: msSFU30MaxUidNumber
 msSFU30MaxUidNumber: {{ IMAP_UID_END }}
 -
-add: msSFU30MaxGidNumber
+replace: msSFU30MaxGidNumber
 msSFU30MaxGidNumber: {{ IMAP_GID_END }}
