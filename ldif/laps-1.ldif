@@ -1,0 +1,29 @@
+dn: CN=ms-MCS-AdmPwd,CN=Schema,cn=configuration,dc=mydomain,dc=lan
+changetype: add
+objectClass: attributeSchema
+ldapDisplayName: ms-MCS-AdmPwd
+adminDisplayName: ms-MCS-AdmPwd
+adminDescription: Stores password of local Administrator account on workstation
+attributeId: 1.2.840.113556.1.8000.2554.50051.45980.28112.18903.35903.6685103.1224907.2.1
+attributeSyntax: 2.5.5.5
+omSyntax: 19
+isSingleValued: TRUE
+systemOnly: FALSE
+searchFlags: 648
+isMemberOfPartialAttributeSet: FALSE
+showInAdvancedViewOnly: FALSE
+
+dn: CN=ms-MCS-AdmPwdExpirationTime,CN=Schema,cn=configuration,dc=mydomain,dc=lan
+changetype: add
+objectClass: attributeSchema
+ldapDisplayName: ms-MCS-AdmPwdExpirationTime
+adminDisplayName: ms-MCS-AdmPwdExpirationTime
+adminDescription: Stores timestamp of last password change
+attributeId: 1.2.840.113556.1.8000.2554.50051.45980.28112.18903.35903.6685103.1224907.2.2
+attributeSyntax: 2.5.5.16
+omSyntax: 65
+isSingleValued: TRUE
+systemOnly: FALSE
+searchFlags: 0
+isMemberOfPartialAttributeSet: FALSE
+showInAdvancedViewOnly: FALSE

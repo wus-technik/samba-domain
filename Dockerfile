@@ -20,5 +20,6 @@ RUN apt-get update \
     && rm -fr /tmp/* /var/tmp/*
 
 COPY init.sh /init.sh
+COPY ldif/ /root/ldif/
 
 CMD /init.sh setup

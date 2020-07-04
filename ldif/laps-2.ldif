@@ -1,0 +1,5 @@
+dn: CN=computer,CN=Schema,cn=configuration,dc=mydomain,dc=lan
+changetype: Modify
+add: mayContain
+mayContain: ms-MCS-AdmPwd
+mayContain: ms-MCS-AdmPwdExpirationTime

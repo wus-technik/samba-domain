@@ -23,6 +23,9 @@ appSetup () {
 	HOSTIP=${HOSTIP:-NONE}
 	TLS=${TLS:-true}
 	LOGS=${LOGS:-false}
+	SCHEMA_LAPS=${SCHEMA_LAPS:-false}
+	RFC2307=${RFC2307:-true}
+	SCHEMA_SSHPUBKEY=${SCHEMA_SSHPUBKEY:-false}
 
 	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
 	MSCHAPV2=${MSCHAPV2:-false}
@@ -42,11 +45,18 @@ appSetup () {
 	fi
 
 	# Set host ip option
-	if [[ "$HOSTIP" != "NONE" ]]; then
+	if [[ "$RFC2307" == "true" ]]; then
+		RFC_OPTION="--use-rfc2307"
+	else
+		RFC_OPTION=""
+	fi
+	
+		if [[ "$HOSTIP" != "NONE" ]]; then
 		HOSTIP_OPTION="--host-ip=$HOSTIP"
 	else
 		HOSTIP_OPTION=""
 	fi
+	
 	if [[ "$DEBUG" == "true" ]]; then
 		SAMBA_DEBUG_OPTION="-d $DEBUGLEVEL"
 		SAMBADAEMON_DEBUG_OPTION="--debug-stderr -d $DEBUGLEVEL"
@@ -60,7 +70,7 @@ appSetup () {
 	if [[ ! -d /etc/samba/external/ ]]; then
 		mkdir /etc/samba/external
 	fi
-
+	
 	# Set up samba
 	mv /etc/krb5.conf /etc/krb5.conf.orig
 	{
@@ -92,7 +102,7 @@ appSetup () {
 				samba-tool domain join ${LDOMAIN} DC -U${URDOMAIN}\\${DOMAINUSER} --password=${DOMAINPASS} --dns-backend=SAMBA_INTERNAL --site=${JOINSITE} ${SAMBA_DEBUG_OPTION}
 			fi
 		else
-			samba-tool domain provision --use-rfc2307 --domain=${URDOMAIN} --realm=${UDOMAIN} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass=${DOMAINPASS} ${HOSTIP_OPTION} ${SAMBA_DEBUG_OPTION}
+			samba-tool domain provision ${RFC_OPTION} --domain=${URDOMAIN} --realm=${UDOMAIN} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass=${DOMAINPASS} ${HOSTIP_OPTION} ${SAMBA_DEBUG_OPTION}
 			
 			if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
 				mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
@@ -135,12 +145,17 @@ tls cafile   = /var/lib/samba/private/tls/ca.pem\\n\
 #tls verify peer = ca_and_name\
 		" /etc/samba/smb.conf
 
+		# Prevent downgrade attacks to md5
+		sed -i "/\[global\]/a \
+reject md5 clients = yes\
+		" /etc/samba/smb.conf
+		
+		
+
 		fi
 		if [[ ${MSCHAPV2,,} == "true" ]]; then
 		sed -i "/\[global\]/a \
-ntlm auth = mschapv2-and-ntlmv2-only\\n\
-lanman auth = no\\n\
-client lanman auth = no\
+ntlm auth = mschapv2-and-ntlmv2-only\
 		" /etc/samba/smb.conf
 		fi
 		sed -i "/\[global\]/a \
