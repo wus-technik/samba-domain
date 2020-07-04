@@ -47,7 +47,7 @@ appSetup () {
 	for dn in ${LDOMAIN}; do
 		LDAPDN="${LDAPDN},DC=$dn"
 	done
-
+	IFS=''
 	# If multi-site, we need to connect to the VPN before joining the domain
 	if [[ ${MULTISITE,,} == "true" ]]; then
 		/usr/sbin/openvpn --config /docker.ovpn &
@@ -64,7 +64,7 @@ appSetup () {
 	fi
 	
 		if [[ "$HOSTIP" != "NONE" ]]; then
-		HOSTIP_OPTION="--host-ip=$HOSTIP"
+		HOSTIP_OPTION="--host-ip=${HOSTIP}"
 	else
 		HOSTIP_OPTION=""
 	fi
@@ -72,7 +72,7 @@ appSetup () {
 	if [[ "$DEBUG" == "true" ]]; then
 		SAMBA_DEBUG_OPTION="-d $DEBUGLEVEL"
 		SAMBADAEMON_DEBUG_OPTION="--debug-stderr -d $DEBUGLEVEL"
-		NTP_DEBUG_OPTION="-D $DEBUGLEVEL"
+		#NTP_DEBUG_OPTION="-D $DEBUGLEVEL"
 	else
 		SAMBA_DEBUG_OPTION=""
 		NTP_DEBUG_OPTION=""
