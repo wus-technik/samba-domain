@@ -1,0 +1,70 @@
+version: '2'
+
+networks:
+  macvlan-samba:
+    external:
+      name: pihole_pihole_network
+
+services:
+
+# ----------- samba begin ----------- #
+
+  samba:
+    build:.
+#    image: helge/samba-domain
+    container_name: samba-ad-dc
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - './samba/tls:/var/lib/samba/private/tls'
+      - './samba/data:/var/lib/samba/'
+      - './samba/data:/var/lib/samba'
+      - './samba/log:/var/log/samba'
+    environment:
+      - DOMAIN=AD.CHAOS
+      - DOMAINPASS=Pa!!word1
+      - DNSFORWARDER=192.168.1.6
+      - HOSTIP=192.168.1.45
+      - TLS=true
+      - LOGS=true
+      - NTPSERVERLIST=192.168.1.1
+      - IMAP_ID_START=10000
+    networks:
+      macvlan-samba:
+        ipv4_address: 192.168.1.45
+    ports:
+      - 53:53
+      - 53:53/udp
+      - 88:88
+      - 88:88/udp
+      - 123:123
+      - 135:135
+      - 137-138:137-138/udp
+      - 139:139
+      - 389:389
+      - 389:389/udp
+      - 445:445
+      - 464:464
+      - 464:464/udp
+      - 636:636
+      - 1024-1044:1024-1044
+      - 3268-3269:3268-3269
+    dns_search:
+      - ad.chaos
+    dns:
+      - 192.168.1.45
+      - 192.168.1.6
+    extra_hosts:
+      - dc01 dc01.ad.chaos:192.168.1.45
+    hostname: dc01
+    domainname: ad.chaos
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+      - SYS_RESOURCE
+      - SYS_TIME
+#    devices:
+#      - /dev/net/tun
+    privileged: true
+    restart: always
+
+# ----------- samba end ----------- #

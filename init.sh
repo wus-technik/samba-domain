@@ -23,12 +23,14 @@ appSetup () {
 	HOSTIP=${HOSTIP:-NONE}
 	TLS=${TLS:-true}
 	LOGS=${LOGS:-false}
-	
+
 	SCHEMA_LAPS=${SCHEMA_LAPS:-true}
 	RFC2307=${RFC2307:-true}
-	SCHEMA_SSHPUBKEY=${SCHEMA_SSHPUBKEY:-true}
-	
+
 	NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
+
+	#Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
+	NETBIOS_NAME=${NETBIOS_NAME:-$(hostname)}
 	
 	MSCHAPV2=${MSCHAPV2:-true}
 	DEBUG=${DEBUG:-false}
@@ -37,15 +39,18 @@ appSetup () {
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
 	URDOMAIN=${UDOMAIN%%.*} #trim
-	
+	#Posix
+	#LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
+    #UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
+    #URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
+
 	# Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
 	# IT does nothing on DCs as they shall not use idmap settings.
 	# Using the same Start and stop values on members however gets the RFC2307 attributs (NIS) rights
 	# idmap config {{ URDOMAIN }} : range = {{ IDMIN }}-{{ IDMAX }} 
-	IMAP_UID_START=${IMAP_UID_START:-10000}
-	IMAP_GID_START=${IMAP_GID_START:-10000}
-	IMAP_UID_STOP=${IMAP_UID_START:-999999}
-	IMAP_GID_STOP=${IMAP_GID_START:-999999}
+	IMAP_ID_START=${IMAP_UID_START:-10000}
+	IMAP_UID_START=${IMAP_UID_START:-$IMAP_ID_START}
+	IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 	#DN for LDIF
 	LDAPDN=""
 	IFS='.'
@@ -97,6 +102,11 @@ appSetup () {
 		echo "    admin_server = FILE:/var/log/samba/kadmind.log"
 	} >> /etc/krb5.conf
 	fi
+	
+	sed -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
+	    -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
+	    -e "s:{{ NETBIOS_NAME }}:$NETBIOS_NAME:" \
+	-i /etc/krb5.conf
 
 	# If the finished file isn't there, this is brand new, we're not just moving to a new container
 	if [[ ! -f /etc/samba/external/smb.conf ]]; then
