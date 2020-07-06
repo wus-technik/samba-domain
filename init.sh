@@ -185,7 +185,8 @@ appSetup () {
 			
 			if [[ "$SCHEMA_SSHPUBKEY" == "true" ]]; then
 			sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
-			-i sshPublicKey
+			-i /root/ldif/sshPublicKey.ldif
+			
 			ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/sshPublicKey.ldif -U Administrator
 			fi
 
@@ -295,9 +296,8 @@ ldap server require strong auth = no\
   SERVERNTPLIST=""
   for DC in $DCs
   do
-    NTPSERVER="$NTPSERVER server ${DC}.${LDOMAIN}    iburst\n"
+    NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
     NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
-	SERVERNTPLIST= "$SERVERNTPLIST server ${DC}     iburst prefer\n"
   done
 
   sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" \
