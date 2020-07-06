@@ -182,17 +182,6 @@ appSetup () {
 			ldbadd -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/laps-1.ldif -U Administrator
 			ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/laps-2.ldif -U Administrator
 			fi
-			
-			if [[ "$SCHEMA_SSHPUBKEY" == "true" ]]; then
-			sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
-			-i /root/ldif/sshPublicKey-1.ldif
-			
-			sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
-			-i /root/ldif/sshPublicKey-2.ldif
-			
-			ldbadd -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/sshPublicKey-1.ldif -U Administrator
-			ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/sshPublicKey-2.ldif -U Administrator
-			fi
 
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
 				samba-tool domain passwordsettings set --complexity=off ${SAMBA_DEBUG_OPTION}
