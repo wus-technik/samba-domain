@@ -346,7 +346,7 @@ case "$1" in
 		;;
 	setup)
 		# If the supervisor conf isn't there, we're spinning up a new container
-		if [[ -f /etc/samba/smb.conf ]]; then
+		if [[ -f /etc/samba/external/smb.conf ]]; then
 			appStart
 		else
 			appSetup
