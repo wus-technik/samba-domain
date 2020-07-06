@@ -26,8 +26,3 @@ subClassOf: top
 objectClassCategory: 3
 defaultObjectCategory: CN=ldapPublicKey,CN=Schema,CN=Configuration {{ LDAPDN }}
 mayContain: sshPublicKey
-
-dn: CN=User,CN=Schema,CN=Configuration {{ LDAPDN }}
-changetype: modify
-add: auxiliaryClass
-auxiliaryClass: ldapPublicKey

@@ -1,0 +1,4 @@
+dn: CN=User,CN=Schema,CN=Configuration {{ LDAPDN }}
+changetype: modify
+add: auxiliaryClass
+auxiliaryClass: ldapPublicKey
