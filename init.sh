@@ -27,9 +27,10 @@ appSetup () {
 	SCHEMA_LAPS=${SCHEMA_LAPS:-true}
 	RFC2307=${RFC2307:-true}
 	SCHEMA_SSHPUBKEY=${SCHEMA_SSHPUBKEY:-true}
-
-	ADLOGINONUNIX=${ADLOGINONUNIX:-false}
-	MSCHAPV2=${MSCHAPV2:-false}
+	
+	NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
+	
+	MSCHAPV2=${MSCHAPV2:-true}
 	DEBUG=${DEBUG:-false}
 	DEBUGLEVEL=${DEBUGLEVEL:-0}
 
@@ -86,19 +87,11 @@ appSetup () {
 	if [[ ! -d /etc/samba/external/ ]]; then
 		mkdir /etc/samba/external
 	fi
-	
-	# Set up samba
-	mv /etc/krb5.conf /etc/krb5.conf.orig
-	{
-		echo "[libdefaults]" > /etc/krb5.conf
-		echo "    dns_lookup_realm = false"
-		echo "    dns_lookup_kdc = true"
-		echo "    default_realm = ${UDOMAIN}"
-	} >> /etc/krb5.conf
 
 	if [[ ${LOGS,,} == "true" ]]; then
 	{
-		echo "[logging]"  >> /etc/krb5.conf
+		echo ""
+		echo "[logging]"
 		echo "    default = FILE:/var/log/samba/krb5libs.log"
 		echo "    kdc = FILE:/var/log/samba/krb5kdc.log"
 		echo "    admin_server = FILE:/var/log/samba/kadmind.log"
@@ -190,7 +183,11 @@ appSetup () {
 			ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/laps-2.ldif -U Administrator
 			fi
 			
-			
+			if [[ "$SCHEMA_SSHPUBKEY" == "true" ]]; then
+			sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
+			-i sshPublicKey
+			ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /root/ldif/sshPublicKey.ldif -U Administrator
+			fi
 
 			if [[ ${NOCOMPLEXITY,,} == "true" ]]; then
 				samba-tool domain passwordsettings set --complexity=off ${SAMBA_DEBUG_OPTION}
@@ -264,11 +261,7 @@ log level = 1\
 ldap server require strong auth = no\
 			" /etc/samba/smb.conf
 		fi
-		if [[ ${ADLOGINONUNIX,,} == "true" ]]; then
-			sed -i "/\[global\]/a \
-winbind enum users = yes\\n\
-winbind enum groups = yes\\n\
-			" /etc/samba/smb.conf
+
 		# nsswitch anpassen
 		sed -i "s,passwd:.*,passwd:         files winbind,g" "/etc/nsswitch.conf"
 		sed -i "s,group:.*,group:          files winbind,g" "/etc/nsswitch.conf"
@@ -282,40 +275,6 @@ winbind enum groups = yes\\n\
 		cp -f /etc/samba/external/smb.conf /etc/samba/smb.conf
 	fi
   
-	# Set up supervisor
-	touch /etc/supervisor/conf.d/supervisord.conf
-	{
-	echo "[supervisord]"
-	echo "nodaemon=true"
-	#Suppress CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
-	echo "user=root"
-	echo ""
-	echo "[program:samba]"
-	echo "command=/usr/sbin/samba -F ${SAMBADAEMON_DEBUG_OPTION}"
-	echo "stdout_logfile=/dev/fd/1"
-	echo "stdout_logfile_maxbytes=0"
-	echo "stdout_logfile_backups=0"
-	echo "priority=100"
-	echo ""
-	echo "[program:ntpd]"
-	echo "command=/usr/sbin/ntpd -c /etc/ntp.conf -n ${NTP_DEBUG_OPTION}"
-	echo "stdout_logfile=/dev/fd/1"
-	echo "stdout_logfile_maxbytes=0"
-	echo "stdout_logfile_backups=0"
-	echo "priority=10"
-	} >> /etc/supervisor/conf.d/supervisord.conf
-	
-	#Suppress CRIT Server 'unix_http_server' running without any HTTP authentication checking
-	#https://github.com/Supervisor/supervisor/issues/717
-	sed -i "/\[unix_http_server\]/a \
-username=dummy\\n\
-password=dummy\
-	" /etc/supervisor/supervisord.conf
-	sed -i "/\[supervisorctl\]/a \
-username = dummy\\n\
-password = dummy\
-	" /etc/supervisor/supervisord.conf
-
 	if [[ ${MULTISITE,,} == "true" ]]; then
 	  if [[ -n $VPNPID ]]; then
 	    kill $VPNPID	
@@ -330,34 +289,20 @@ password = dummy\
 		touch /var/lib/ntp/ntp.drift
 	fi
 	
-	touch /etc/ntp.conf
-	{
-	  echo "# Where to retrieve the time from"
-	  echo "server 0.pool.ntp.org     iburst prefer"
-	  echo "server 1.pool.ntp.org     iburst prefer"
-	  echo "server 2.pool.ntp.org     iburst prefer"
-	  echo ""
-	  echo "driftfile       /var/lib/ntp/ntp.drift"
-	  echo "logfile         /var/log/ntp"
-	  echo "ntpsigndsocket  /var/lib/samba/ntp_signd/"
-	  echo ""
-	  echo "# Access control"
-	  echo "# Default restriction: Allow clients only to query the time"
-	  echo "restrict -4 default kod limited nomodify notrap nopeer mssntp"
-	  echo "restrict -6 default kod limited nomodify notrap nopeer mssntp"
-	  echo ""
-	  echo "# No restrictions for localhost"
-	  echo "restrict 127.0.0.1"
-	  echo "restrict -6 ::1"
-	  echo ""
-	  echo "# Enable the time sources to only provide time to this host"
-	  echo "restrict 0.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo "restrict 1.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo "restrict 2.pool.ntp.org   mask 255.255.255.255    nomodify notrap nopeer noquery"
-	  echo ""
-	  echo "# Don't panic if time is far off - ideal for VM or container"
-	  echo "tinker panic 0"
-	}  >> /etc/ntp.conf
+  DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
+  NTPSERVER=""
+  NTPSERVERRESTRICT=""
+  SERVERNTPLIST=""
+  for DC in $DCs
+  do
+    NTPSERVER="$NTPSERVER server ${DC}.${LDOMAIN}    iburst\n"
+    NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
+	SERVERNTPLIST= "$SERVERNTPLIST server ${DC}     iburst prefer\n"
+  done
+
+  sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" \
+    -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" \
+  -i /etc/ntp.conf
 
 	  # Own socket
 	  mkdir -p /var/lib/samba/ntp_signd/

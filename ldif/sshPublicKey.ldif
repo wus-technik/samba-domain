@@ -1,8 +1,9 @@
-dn: CN=sshPublicKey,${SCHEMADN}
+dn: CN=sshPublicKey,CN=Schema,CN=Configuration {{ LDAPDN }}
 changetype: add
 objectClass: top
 objectClass: attributeSchema
 attributeID: 1.3.6.1.4.1.24552.500.1.1.1.13
+schemaIDGUID:: fHCvUrxcsUSrYRq8nUvw5Q==
 cn: sshPublicKey
 name: sshPublicKey
 lDAPDisplayName: sshPublicKey
@@ -10,27 +11,23 @@ description: MANDATORY: OpenSSH Public key
 attributeSyntax: 2.5.5.10
 oMSyntax: 4
 isSingleValued: FALSE
-objectCategory: CN=Attribute-Schema,${SCHEMADN}
-searchFlags: 8
-schemaIDGUID:: cjDAZyEXzU+/akI0EGDW+g==
 
-dn: CN=ldapPublicKey,${SCHEMADN}
+dn: CN=ldapPublicKey,CN=Schema,CN=Configuration {{ LDAPDN }}
 changetype: add
 objectClass: top
 objectClass: classSchema
 governsID: 1.3.6.1.4.1.24552.500.1.1.2.0
+schemaIDGUID:: yfKd3707f0qnSxgXE9qYeA==
 cn: ldapPublicKey
 name: ldapPublicKey
 description: MANDATORY: OpenSSH LPK objectclass
 lDAPDisplayName: ldapPublicKey
 subClassOf: top
 objectClassCategory: 3
-objectCategory: CN=Class-Schema,${SCHEMADN}
-defaultObjectCategory: CN=ldapPublicKey,${SCHEMADN}
+defaultObjectCategory: CN=ldapPublicKey,CN=Schema,CN=Configuration {{ LDAPDN }}
 mayContain: sshPublicKey
-schemaIDGUID:: +8nFQ43rpkWTOgbCCcSkqA==
 
-dn: CN=User,CN=Schema,CN=Configuration,${DOMAINDN}
+dn: CN=User,CN=Schema,CN=Configuration {{ LDAPDN }}
 changetype: modify
 add: auxiliaryClass
 auxiliaryClass: ldapPublicKey

@@ -21,5 +21,6 @@ RUN apt-get update \
 
 COPY init.sh /init.sh
 COPY ldif/ /root/ldif/
+COPY /etc /etc/
 
 CMD /init.sh setup
