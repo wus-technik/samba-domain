@@ -267,7 +267,7 @@ ldap server require strong auth = no\
 		sed -i "s,group:.*,group:          files winbind,g" "/etc/nsswitch.conf"
 		sed -i "s,hosts:.*,hosts:          files dns,g" "/etc/nsswitch.conf"
 		sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
-		fi
+
 
 		# Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
 		cp -f /etc/samba/smb.conf /etc/samba/external/smb.conf
