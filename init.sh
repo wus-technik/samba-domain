@@ -14,6 +14,7 @@ appSetup () {
 	DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
 	DOMAINUSER=${DOMAINUSER:-Administrator}
 	DOMAINPASS=${DOMAINPASS:-youshouldsetapassword}
+	DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-NONE}
 	JOIN=${JOIN:-false}
 	JOINSITE=${JOINSITE:-NONE}
 	MULTISITE=${MULTISITE:-false}
@@ -38,7 +39,11 @@ appSetup () {
 
 	LDOMAIN=${DOMAIN,,} #alllowercase
 	UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
-	URDOMAIN=${UDOMAIN%%.*} #trim
+	if [[ ${DOMAIN_NETBIOS} == "NONE" ]]; then
+    URDOMAIN=${UDOMAIN%%.*}
+  else
+    URDOMAIN=${DOMAIN_NETBIOS}
+  fi
 	#Posix
 	#LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
     #UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
