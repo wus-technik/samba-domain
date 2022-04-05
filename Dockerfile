@@ -1,4 +1,4 @@
-FROM ubuntu
+FROM ubuntu:focal
 
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
