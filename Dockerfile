@@ -23,4 +23,6 @@ COPY init.sh /init.sh
 COPY ldif/ /root/ldif/
 COPY /etc /etc/
 
+RUN chmod +x /init.sh
+
 CMD /init.sh setup
