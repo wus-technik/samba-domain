@@ -275,7 +275,7 @@ dns forwarder = ${DNSFORWARDER}\
     fi
 
     if [[ ${TLS,,} = true ]]; then
-	  if [ ! -f tls/key.pem] && [ ! -f tls/cert.pem ]; then
+	  if [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
 
       fi
 	  if [ ! -f /var/lib/samba/private/tls/dh.key ]; then
@@ -388,9 +388,9 @@ ldap server require strong auth = no\
     mkdir /var/lib/samba/winbindd_privileged/
     chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
     chmod 0750 /var/lib/samba/winbindd_privileged
-  else
-    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
-    chmod 0750 /var/lib/samba/winbindd_privileged
+#  else
+#    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
+#    chmod 0750 /var/lib/samba/winbindd_privileged
   fi
 
   appFirstStart

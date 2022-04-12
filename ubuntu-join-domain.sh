@@ -19,36 +19,40 @@ echo "Setting hostnames..."
 hostnamectl set-hostname ${HOSTNAME}
 
 DEBIAN_FRONTEND=noninteractive apt install -y realmd sssd sssd-tools libnss-sss libpam-sss krb5-user adcli samba-common-bin
-
+{
 echo "" > /etc/krb5.conf
-echo "[libdefaults]" >> /etc/krb5.conf
-echo "	default_realm = ${UP_DOMAIN}" >> /etc/krb5.conf
-echo "	kdc_timesync = 1" >> /etc/krb5.conf
-echo "	ccache_type = 4" >> /etc/krb5.conf
-echo "	forwardable = true" >> /etc/krb5.conf
-echo "	proxiable = true" >> /etc/krb5.conf
-echo "	fcc-mit-ticketflags = true" >> /etc/krb5.conf
-echo "" >> /etc/krb5.conf
-echo "[realms]" >> /etc/krb5.conf
+echo "[libdefaults]"
+echo "	default_realm = ${UP_DOMAIN}"
+echo "	kdc_timesync = 1"
+echo "	ccache_type = 4"
+echo "	forwardable = true"
+echo "	proxiable = true"
+echo "	fcc-mit-ticketflags = true"
+echo ""
+echo "[realms]"
+} >> /etc/krb5.conf
 
-echo " " >> /etc/realmd.conf
-echo "[active-directory]" >> /etc/realmd.conf
-echo " default-client = sssd" >> /etc/realmd.conf
-echo " os-name = ${OSNAME}" >> /etc/realmd.conf
-echo " os-version = ${OSVERSION}" >> /etc/realmd.conf
-echo " " >> /etc/realmd.conf
-echo "[service]" >> /etc/realmd.conf
-echo " automatic-install = no" >> /etc/realmd.conf
-echo " " >> /etc/realmd.conf
-echo "[${UP_DOMAIN}]" >> /etc/realmd.conf
-echo " fully-qualified-names = yes" >> /etc/realmd.conf
-echo " automatic-id-mapping = no" >> /etc/realmd.conf
-echo " user-principal = yes" >> /etc/realmd.conf
-echo " manage-system = yes" >> /etc/realmd.conf
+{
+echo " "
+echo "[active-directory]"
+echo " default-client = sssd"
+echo " os-name = ${OSNAME}"
+echo " os-version = ${OSVERSION}"
+echo " "
+echo "[service]"
+echo " automatic-install = no"
+echo " "
+echo "[${UP_DOMAIN}]"
+echo " fully-qualified-names = yes"
+echo " automatic-id-mapping = no"
+echo " user-principal = yes"
+echo " manage-system = yes"
+} >> /etc/realmd.conf
 
 echo "Now, check off the box for auto-create home directory in the next configuration screen."
 echo -n "Press enter to continue..."
-read E
+#read E
+read -r E
 pam-auth-update
 
 echo "Time to test..."
@@ -61,27 +65,37 @@ kdestroy
 
 echo ""
 echo -n "If the above test didn't error, press ENTER to join the domain."
-read E
+#read E
+read -r E
 
 echo ""
 echo "Joining domain"
 realm join --verbose --user=${PROVISIONINGUSER} --computer-ou=${COMPUTEROU} ${UP_DOMAIN}
 
 echo "Configuring SSSD..."
-echo "[sssd]" > /etc/sssd/sssd.conf
-echo "domains = ${LO_DOMAIN}" >> /etc/sssd/sssd.conf
-echo "config_file_version = 2" >> /etc/sssd/sssd.conf
-echo "services = nss, pam" >> /etc/sssd/sssd.conf
-echo "" >> /etc/sssd/sssd.conf
-echo "[domain/${LO_DOMAIN}]" >> /etc/sssd/sssd.conf
-echo "ad_domain = ${LO_DOMAIN}" >> /etc/sssd/sssd.conf
-echo "krb5_realm = ${UP_DOMAIN}" >> /etc/sssd/sssd.conf
-echo "realmd_tags = manages-system joined-with-adcli" >> /etc/sssd/sssd.conf
-echo "cache_credentials = True" >> /etc/sssd/sssd.conf
-echo "id_provider = ad" >> /etc/sssd/sssd.conf
-echo "krb5_store_password_if_offline = True" >> /etc/sssd/sssd.conf
-echo "default_shell = /bin/bash" >> /etc/sssd/sssd.conf
-echo "ldap_id_mapping = True" >> /etc/sssd/sssd.conf
+if [ -f /etc/sssd/sssd.conf ]; then
+rm /etc/sssd/sssd.conf
+fi
+touch /etc/sssd/sssd.conf
+
+
+{
+echo "[sssd]"     
+echo "domains = ${LO_DOMAIN}"
+echo "config_file_version = 2"
+echo "services = nss, pam"
+echo ""
+echo "[domain/${LO_DOMAIN}]"
+echo "ad_domain = ${LO_DOMAIN}"
+echo "krb5_realm = ${UP_DOMAIN}"
+echo "realmd_tags = manages-system joined-with-adcli"
+echo "cache_credentials = True"
+echo "id_provider = ad"
+echo "krb5_store_password_if_offline = True"
+echo "default_shell = /bin/bash"
+echo "ldap_id_mapping = True"        
+} >> /etc/sssd/sssd.conf
+
 if [ $USEDOMAININHOMEDIR == "False" ]; then
 	echo "fallback_homedir = /home/%u" >> /etc/sssd/sssd.conf
 else
@@ -95,7 +109,9 @@ realm permit --all
 if [ $USEDOMAININHOMEDIR == "True" ]; then
 	echo "Now, enter '/home/${LO_DOMAIN}/' with the trailing slash in the next configuration screen."
 	echo -n "Press enter to continue..."
-	read E
+	#read E
+	read -r E
+	#SC2034 (warning): E appears unused. Verify use (or export if used externally).
 	dpkg-reconfigure apparmor
 fi
 
