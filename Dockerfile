@@ -1,4 +1,4 @@
-FROM ubuntu
+FROM ubuntu:devel
 
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
@@ -20,7 +20,61 @@ RUN apt-get update \
     && rm -fr /tmp/* /var/tmp/*
 
 COPY init.sh /init.sh
-COPY ldif/ /root/ldif/
+COPY /ldif /ldif/
 COPY /etc /etc/
+COPY /scripts /scripts/
 
-CMD /init.sh setup
+RUN chmod +x /init.sh
+
+# DNS
+EXPOSE 53/tcp
+EXPOSE 53/udp
+
+# Kerberos
+EXPOSE 88/tcp
+EXPOSE 88/udp
+
+# NTP
+EXPOSE 123/udp
+
+# End Point Mapper (DCE/RPC Locator Service) 
+EXPOSE 135/tcp
+
+# NetBIOS Name Service
+EXPOSE 137/udp
+
+# NetBIOS Datagram Service
+EXPOSE 138/udp
+
+# NetBIOS Session Service
+EXPOSE 139/tcp
+
+# LDAP
+EXPOSE 389/tcp
+EXPOSE 389/udp
+
+# SMB over TCP
+EXPOSE 445/tcp
+
+# Kerberos Change/Set password
+EXPOSE 464/tcp
+EXPOSE 464/udp
+
+# LDAPS
+EXPOSE 636/tcp
+
+# msft-gc, Microsoft Global Catalog
+EXPOSE 3268/tcp
+
+# msft-gc, Microsoft Global Catalog over SSL
+EXPOSE 3269/tcp
+
+# Dynamic RPC Ports # LIMITED TO 18 CONNECTIONS FOR SMALL ARM PROXY DEVICES
+# EXPOSE 49152-65535/tcp
+EXPOSE 49152-49170/tcp
+
+WORKDIR /
+
+HEALTHCHECK CMD smbcontrol smbd num-children || exit 1
+
+ENTRYPOINT ["bash", "init.sh"]

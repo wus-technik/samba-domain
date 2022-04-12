@@ -1,22 +1,34 @@
+# FORKED
+![Githubg Workflow Image CI](https://img.shields.io/github/workflow/status/burnbabyburn/docker-ubuntu-samba-dc/Docker%20Image%20CI)
+* No OpenVPN testing
+* No second DC testing
+
 # Samba Active Directory Domain Controller for Docker
 
 A well documented, tried and tested Samba Active Directory Domain Controller that works with the standard Windows management tools; built from scratch using internal DNS and kerberos and not based on existing containers.
 
 ## Environment variables for quick start
-
+* `BIND_INTERFACE` boolean to bind to interfaces. Avoids messing up samba dns entries with random interface ip. defaults to false
+* `INTERFACES` container internal interfaces to bind to. docker interface names are given alphabetically. e.g. docker-network-name=a => eth0 in container; docker-network-name=b => eth1 in container . Valid values would be `eth0` or a list seperated by space `eth0 eth1`
+* `DOMAIN_NETBIOS` NETBIOS domain name. defaults to first portion of DNS DOMAIN NAME. e.g. DNS-Domain=SAMDOM.EXAMPLE.COM - NETBIOS-Domain=SAMDOM
+* `HOSTNAME` Hostname of the dc
+#* `IMAP_ID_START` BaseID to derive SID and GID from. defaults to 1000
+#* `IMAP_SID_START` ID to which to start SID from. defaults to `IMAP_ID_START`
+#* `IMAP_GID_START` ID to which to start GID from. defaults to `IMAP_ID_START`
 * `DOMAIN` defaults to `CORP.EXAMPLE.COM` and should be set to your domain
+* `DOMAINUSER` Domain administrator username. Use docker secrets
 * `DOMAINPASS` should be set to your administrator password, be it existing or new. This can be removed from the environment after the first setup run.
 * `HOSTIP` can be set to the IP you want to advertise.
 * `JOIN` defaults to `false` and means the container will provision a new domain. Set this to `true` to join an existing domain.
-* `JOINSITE` is optional and can be set to a site name when joining a domain, otherwise the default site will be used.
+* `JOINSITE` is optional and can be set to a site name when joining and creating a domain, otherwise the default site name will be used.
 * `DNSFORWARDER` is optional and if an IP such as `192.168.0.1` is supplied will forward all DNS requests samba can't resolve to that DNS server. Only add once. Add multiple forwarder speerated by spaces. Otherwise smb.conf will break
 * `INSECURELDAP` defaults to `false`. When set to true, it removes the secure LDAP requirement. While this is not recommended for production it is required for some LDAP tools. You can remove it later from the smb.conf file stored in the config directory.
 * `MULTISITE` defaults to `false` and tells the container to connect to an OpenVPN site via an ovpn file with no password. For instance, if you have two locations where you run your domain controllers, they need to be able to interact. The VPN allows them to do that.
 * `NOCOMPLEXITY` defaults to `false`. When set to `true` it removes password complexity requirements including `complexity, history-length, min-pwd-age, max-pwd-age`
 * `TLS` defaults to `false`. When set to `true` it creates certificate files for ldaps
 * `LOGS` defaults to `false`. When set to `true` it creates log file in /var/log/samba for kerberos and samba. Add a mapping
-* `ADLOGINONUNIX` defaults to `false`. When false nothing changes. When true windbind is added to `/etc/nsswitch.conf` and `windbind enum users` and `winbind enum groups` are enabled.
-* `FREERADIUS` defaults to `false`. When false nothing changes. When true ntlm auth = mschapv2-and-ntlmv2-only is added to config.
+#* `ADLOGINONUNIX` defaults to `false`. When false nothing changes. When true windbind is added to `/etc/nsswitch.conf` and `windbind enum users` and `winbind enum groups` are enabled.
+* `MSCHAPV2` defaults to `false`. When false nothing changes. When true ntlm auth = mschapv2-and-ntlmv2-only is added to config.
 
 ## Add Reverse DNS Zone
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"
