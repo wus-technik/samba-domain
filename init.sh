@@ -276,7 +276,7 @@ dns forwarder = ${DNSFORWARDER}\
 
     if [[ ${TLS,,} = true ]]; then
 	  if [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
-
+print "empty if clause - work with me"
       fi
 	  if [ ! -f /var/lib/samba/private/tls/dh.key ]; then
         openssl dhparam -out /var/lib/samba/private/tls/dh.key 2048
