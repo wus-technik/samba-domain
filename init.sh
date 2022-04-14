@@ -155,6 +155,7 @@ appSetup () {
 
       {
         echo ""
+        echo ""
         echo "[program:ChangeKRBTGT]"
         echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
         echo "stdout_logfile=/dev/fd/1"
@@ -375,8 +376,8 @@ ldap server require strong auth = no\
     NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
   done
 
-  sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" \
-    -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" \
+  sed -e "s/{{ NTPSERVER }}/$NTPSERVER" \
+    -e "s/{{ NTPSERVERRESTRICT }}/$NTPSERVERRESTRICT" \
     -i /etc/ntp.conf
 
   # Own socket
