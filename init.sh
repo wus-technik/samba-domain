@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -e
+set -e
 set -x
 
 #Todo:
@@ -43,20 +43,24 @@ appSetup () {
   DNSFORWARDER=${DNSFORWARDER:-NONE}
   HOSTIP=${HOSTIP:-NONE}
   HOSTNAME=${HOSTNAME:-$(hostname)}
+  export HOSTNAME="$HOSTNAME"
   TLS=${TLS:-false}
+  TLS_PKI=${TLS_PKI:-false}
+  PKI_O=${PKI_O:-Simple Root CA}
+  PKI_OU=${PKI_OU:-Samba}
+  PKI_CN=${PKI_CN:-Simple Samba Root CA}
   LOGS=${LOGS:-false}
 
   SCHEMA_LAPS=${SCHEMA_LAPS:-true}
-  RFC2307=${RFC2307:-true}
+  RFC2307=${RFC2307:-false}
 
   NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
 
   MSCHAPV2=${MSCHAPV2:-false}
-  DEBUG=${DEBUG:-false}
-  DEBUGLEVEL=${DEBUGLEVEL:-0}
+  DEBUG=${DEBUG:-true}
+  DEBUGLEVEL=${DEBUGLEVEL:-10}
 
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
-
   if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then
     echo "DOMAIN_NETBIOS too long => exiting"
     #exit 1
@@ -88,34 +92,27 @@ appSetup () {
     sleep 30
   fi
 
-  # Set host ip option
-  # Join rfc will be broken (escaping)
   if [[ "$RFC2307" = true ]]; then
-    if [[ ${JOIN,,} = true ]]; then
-      OPTION_RFC=--option="idmap_ldb:use rfc2307 = yes"
-    else
-      OPTION_RFC=--use-rfc2307
-    fi
+    OPTION_RFC=--use-rfc2307
   fi
-
   if [[ "$HOSTIP" != "NONE" ]]; then
-    OPTION_HOSTIP="--host-ip=${HOSTIP}"
+    OPTION_HOSTIP=--host-ip="${HOSTIP}"
   fi
   if [[ "$JOINSITE" != "NONE" ]]; then
-    OPTION_JOIN="--site=${JOINSITE}"
+    OPTION_JOIN=--site="${JOINSITE}"
   fi
-# fails due to space and wrong escaping of variables
-#  if [[ "$DNSFORWARDER" != "NONE" ]]; then
-#    OPTIONS=--option="dns forwarder=${DNSFORWARDER}"
-#  fi
-#  if [[ "$BIND_INTERFACE" = true ]]; then
-#    OPTIONS=--option="interfaces=${INTERFACES,,} lo"
-#    OPTIONS=--option="bind interfaces only = yes"
-#  fi
+  #fails due to space and wrong escaping of variables
+  if [[ "$DNSFORWARDER" != "NONE" ]]; then
+    OPTION_DNS_FWD=--option="dns forwarder=${DNSFORWARDER}"
+  fi
+  if [[ "$BIND_INTERFACE" = true ]]; then
+    OPTION_INT=--option="interfaces=${INTERFACES,,} lo"
+    OPTION_BIND=--option="bind interfaces only = yes"
+  fi
 
   if [[ "$DEBUG" = true ]]; then
     SAMBA_DEBUG_OPTION="-d $DEBUGLEVEL"
-    SAMBADAEMON_DEBUG_OPTION="--debug-stderr -d $DEBUGLEVEL"
+    SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUGLEVEL"
     NTP_DEBUG_OPTION=""
     #NTP_DEBUG_OPTION="-D $DEBUGLEVEL"
 
@@ -132,10 +129,6 @@ appSetup () {
     mkdir /etc/samba/external
   fi
 
-  if [[ ${LOGS,,} = true ]]; then
-    sed -i '/FILE:/s/^#//g' /etc/krb5.conf
-  fi
-
   sed -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
     -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
     -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
@@ -146,20 +139,36 @@ appSetup () {
     if [[ -f /etc/samba/smb.conf ]]; then
       mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
     fi
-    # NOTE: DO not escape the variables below with "" it will break syntax
-	# Optional params without ""
+    # NOTE: DO not escape the missing variables below with "" it will break syntax
+	# Optional params without "" will break the command
     if [[ ${JOIN,,} = true ]]; then
-      samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAINUSER}" --password="${DOMAINPASS}" "${OPTION_JOIN}" "${OPTION_RFC}" --dns-backend=SAMBA_INTERNAL ${SAMBA_DEBUG_OPTION}
-    else
-      samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" ${OPTION_HOSTIP} ${OPTION_RFC} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" --host-name="${HOSTNAME}" ${SAMBA_DEBUG_OPTION} --option="interfaces=${INTERFACES,,} lo" --option="bind interfaces only = yes"
+	  n=0
+      until [ "$n" -ge 10 ]
+	  do
+        samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAINUSER}" --password="${DOMAINPASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} && s=0 && break || s=$? && sleep 60
+      done; (exit $s)
+	  # Netlogon & sysvol readonly on secondary DC
+	  {
+        echo " "
+        echo "[netlogon]"
+        echo "path = /var/lib/samba/sysvol/test.dom/scripts"
+        echo "read only = Yes"
+        echo " "
+        echo "[sysvol]"
+        echo "path = /var/lib/samba/sysvol"
+        echo "read only = Yes"
+	  } >> /etc/samba/smb.conf
 
-      {
+    else
+      samba-tool domain provision "--domain=${DOMAIN_NETBIOS}" "--realm=${UDOMAIN}" "${OPTION_JOIN}" "--adminpass=${DOMAINPASS}" "--host-name=${HOSTNAME}" '--server-role=dc' '--dns-backend=SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC}  ${SAMBA_DEBUG_OPTION} || echo " Samba Domain Provisioning failed" && exit 1
+	  {
         echo ""
         echo "[program:ChangeKRBTGT]"
         echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
         echo "stdout_logfile=/dev/fd/1"
         echo "stdout_logfile_maxbytes=0"
         echo "stdout_logfile_backups=0"
+		echo "redirect_stderr=true"
         echo "priority=99"
       } >> /etc/supervisor/conf.d/supervisord.conf
 
@@ -249,18 +258,18 @@ username map = /etc/samba/user.map\
     " /etc/samba/smb.conf
     fi
 
-    if [ "${BIND_INTERFACE,,}" = true ]; then
+    #if [ "${BIND_INTERFACE,,}" = true ]; then
       #    sed -i "/\[global\]/a \
         #interfaces =${INTERFACES,,} lo\\n\
         #bind interfaces only = yes\
         #    " /etc/samba/smb.conf
-      printf >> "interface listen lo" /etc/ntp.conf
-      for INTERFACE in $INTERFACES
-      do
-        printf >> "interface listen $INTERFACE"
-      done
+    #  printf >> "interface listen lo" /etc/ntp.conf
+    #  for INTERFACE in $INTERFACES
+    #  do
+    #    printf >> "interface listen $INTERFACE"
+    #  done
 
-    fi
+    #fi
     ###################
     # limit dynamic rpc port from 49152-65535 to 49172 so we can proxy them (otherwise we run out of memory)
     sed -i "/\[global\]/a \
@@ -276,6 +285,7 @@ dns forwarder = ${DNSFORWARDER}\
 
     if [[ ${TLS,,} = true ]]; then
 	  if [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
+	  
 print "empty if clause - work with me"
       fi
 	  if [ ! -f /var/lib/samba/private/tls/dh.key ]; then
@@ -316,18 +326,19 @@ printcap name = /dev/null\\n\
 disable spoolss = yes\
     " /etc/samba/smb.conf
 
-    if [[ ${LOGS,,} = true ]]; then
-      sed -i "/\[global\]/a \
-log file = /var/log/samba/%m.log\\n\
-max log size = 10000\\n\
-log level = 1\
-      " /etc/samba/smb.conf
-    else
-      sed -i "/\[global\]/a \
-syslog = 0\\n\
-log level = 0\
-      " /etc/samba/smb.conf
-    fi
+#    if [[ ${LOGS,,} = true ]]; then
+#      sed -i "/\[global\]/a \
+#log file = /var/log/samba/%m.log\\n\
+#max log size = 10000\\n\
+#log level = 1\
+#      " /etc/samba/smb.conf
+#    else
+#      sed -i "/\[global\]/a \
+#log level = 0\\n\
+#      " /etc/samba/smb.conf
+#sed -i '/FILE:/s/^#//g' /etc/krb5.conf
+#    fi
+
     if [[ ${INSECURELDAP,,} = true ]]; then
       sed -i "/\[global\]/a \
 ldap server require strong auth = no\
@@ -358,6 +369,7 @@ ldap server require strong auth = no\
       echo "stdout_logfile=/dev/fd/1"
       echo "stdout_logfile_maxbytes=0"
       echo "stdout_logfile_backups=0"
+	  echo "redirect_stderr=true"
       echo "priority=1"
     } >> /etc/supervisor/conf.d/supervisord.conf
   fi

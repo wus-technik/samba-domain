@@ -8,13 +8,14 @@
 A well documented, tried and tested Samba Active Directory Domain Controller that works with the standard Windows management tools; built from scratch using internal DNS and kerberos and not based on existing containers.
 
 ## Environment variables for quick start
+* `RFC2307` Enable RFC2307 support
 * `BIND_INTERFACE` boolean to bind to interfaces. Avoids messing up samba dns entries with random interface ip. defaults to false
 * `INTERFACES` container internal interfaces to bind to. docker interface names are given alphabetically. e.g. docker-network-name=a => eth0 in container; docker-network-name=b => eth1 in container . Valid values would be `eth0` or a list seperated by space `eth0 eth1`
-* `DOMAIN_NETBIOS` NETBIOS domain name. defaults to first portion of DNS DOMAIN NAME. e.g. DNS-Domain=SAMDOM.EXAMPLE.COM - NETBIOS-Domain=SAMDOM
+* `DOMAIN_NETBIOS` NETBIOS domain name. AKA WORKGROUP. Defaults to first portion of DNS DOMAIN NAME. e.g. DNS-Domain=SAMDOM.EXAMPLE.COM - NETBIOS-Domain=SAMDOM
 * `HOSTNAME` Hostname of the dc
-#* `IMAP_ID_START` BaseID to derive SID and GID from. defaults to 1000
-#* `IMAP_SID_START` ID to which to start SID from. defaults to `IMAP_ID_START`
-#* `IMAP_GID_START` ID to which to start GID from. defaults to `IMAP_ID_START`
+* `IMAP_ID_START` BaseID to derive SID and GID from. defaults to 1000 - NOT NEEDED ON DCs
+* `IMAP_SID_START` ID to which to start SID from. defaults to `IMAP_ID_START` - NOT NEEDED ON DCs
+* `IMAP_GID_START` ID to which to start GID from. defaults to `IMAP_ID_START` - NOT NEEDED ON DCs
 * `DOMAIN` defaults to `CORP.EXAMPLE.COM` and should be set to your domain
 * `DOMAINUSER` Domain administrator username. Use docker secrets
 * `DOMAINPASS` should be set to your administrator password, be it existing or new. This can be removed from the environment after the first setup run.
