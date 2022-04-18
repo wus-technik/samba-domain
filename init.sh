@@ -34,6 +34,7 @@ appSetup () {
   #UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
   #URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
   #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
+
   DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
   JOINSITE=${JOINSITE:-Default-First-Site-Name}
   JOIN=${JOIN:-false}
@@ -93,7 +94,11 @@ appSetup () {
   fi
 
   if [[ "$RFC2307" = true ]]; then
-    OPTION_RFC=--use-rfc2307
+    if [[ "$JOIN" = true ]];then
+	  OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes'
+	else
+      OPTION_RFC=--use-rfc2307	  
+	fi
   fi
   if [[ "$HOSTIP" != "NONE" ]]; then
     OPTION_HOSTIP=--host-ip="${HOSTIP}"
@@ -142,10 +147,12 @@ appSetup () {
     # NOTE: DO not escape the missing variables below with "" it will break syntax
 	# Optional params without "" will break the command
     if [[ ${JOIN,,} = true ]]; then
+#	  if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
 	  n=0
       until [ "$n" -ge 10 ]
 	  do
-        samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAINUSER}" --password="${DOMAINPASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} && s=0 && break || s=$? && sleep 60
+        samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAINUSER}" ${OPTION_RFC} --password="${DOMAINPASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} && s=0 && break || s=$? && sleep 60
+		n++
       done; (exit $s)
 	  # Netlogon & sysvol readonly on secondary DC
 	  {
@@ -158,7 +165,21 @@ appSetup () {
         echo "path = /var/lib/samba/sysvol"
         echo "read only = Yes"
 	  } >> /etc/samba/smb.conf
-
+      #Check if Join was successfull
+	  if [ host -t A $HOSTNAME.$LDOMAIN. ];then
+	    echo "found DNS host record"
+      else
+	    echo "no DNS host record found. Running fix"
+		#samba-tool dns add DC1 samdom.example.com DC2 A 10.99.0.2 -Uadministrator
+	  fi
+	  # [https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record]
+	   # on existing DC e.g DC01
+	   # objectGUIDs = ldbsearch -H /usr/local/samba/private/sam.ldb '(invocationId=*)' --cross-ncs objectguid | grep objectguid
+	   #foreach objectGUID in objectGUIDs
+	   # if [ host -t CNAME $objectGUID._msdcs.samdom.example.com. ];then
+	     # samba-tool dns add DC1 _msdcs.samdom.example.com df4bdd8c-abc7-4779-b01e-4dd4553ca3e9 CNAME DC2.samdom.example.com -Uadministrator
+		 # samba-tool dns add DC1 _msdcs.samdom.example.com $objectGUID CNAME DC2.samdom.example.com -Uadministrator -p password
+	   #fi
     else
       samba-tool domain provision "--domain=${DOMAIN_NETBIOS}" "--realm=${UDOMAIN}" "${OPTION_JOIN}" "--adminpass=${DOMAINPASS}" "--host-name=${HOSTNAME}" '--server-role=dc' '--dns-backend=SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC}  ${SAMBA_DEBUG_OPTION} || echo " Samba Domain Provisioning failed" && exit 1
 	  {
@@ -305,7 +326,8 @@ tls dh params file = tls/dh.key\\n\
 
       # Prevent downgrade attacks to md5
       sed -i "/\[global\]/a \
-reject md5 clients = yes\
+reject md5 clients = yes\\n\
+reject md5 servers = yes\
     " /etc/samba/smb.conf
     fi
 
@@ -357,6 +379,17 @@ ldap server require strong auth = no\
   else
     cp -f /etc/samba/external/smb.conf /etc/samba/smb.conf
   fi
+    # https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
+  	#Test Kerberos
+	if [ echo "${DOMAINPASS}" | kinit "${DOMAINUSER}" ];then
+	  echo " kinit successfull"
+	  klist
+    fi
+	# Verify Samba Fileserver is working
+	smbclient -L localhost -N
+	# Test Samba Auth
+	smbclient //localhost/netlogon -U"${DOMAINUSER}" -c 'ls' --password "${DOMAINPASS}"
+	
   # Stop VPN & write supervisor service
   if [[ ${MULTISITE,,} = true ]]; then
     if [[ -n $VPNPID ]]; then
@@ -396,14 +429,14 @@ ldap server require strong auth = no\
   chown root:ntp /var/lib/samba/ntp_signd/
   chmod 750 /var/lib/samba/ntp_signd/
 
-  if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
-    mkdir /var/lib/samba/winbindd_privileged/
-    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
-    chmod 0750 /var/lib/samba/winbindd_privileged
+#  if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
+#    mkdir /var/lib/samba/winbindd_privileged/
+#    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
+#    chmod 0750 /var/lib/samba/winbindd_privileged
 #  else
 #    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
 #    chmod 0750 /var/lib/samba/winbindd_privileged
-  fi
+#  fi
 
   appFirstStart
 }
@@ -415,6 +448,8 @@ appFirstStart () {
 }
 
 appStart () {
+  # Check for samdb errors
+  samba-tool dbcheck --cross-ncs --fix --yes
   /usr/bin/supervisord
 }
 
