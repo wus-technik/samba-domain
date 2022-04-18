@@ -181,7 +181,8 @@ appSetup () {
 		 # samba-tool dns add DC1 _msdcs.samdom.example.com $objectGUID CNAME DC2.samdom.example.com -Uadministrator -p password
 	   #fi
     else
-      samba-tool domain provision "--domain=${DOMAIN_NETBIOS}" "--realm=${UDOMAIN}" "${OPTION_JOIN}" "--adminpass=${DOMAINPASS}" "--host-name=${HOSTNAME}" '--server-role=dc' '--dns-backend=SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC}  ${SAMBA_DEBUG_OPTION} || echo " Samba Domain Provisioning failed" && exit 1
+#      samba-tool domain provision "--domain=${DOMAIN_NETBIOS}" "--realm=${UDOMAIN}" "${OPTION_JOIN}" "--adminpass=${DOMAINPASS}" "--host-name=${HOSTNAME}" '--server-role=dc' '--dns-backend=SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC}  ${SAMBA_DEBUG_OPTION} || echo " Samba Domain Provisioning failed" && exit 1
+      samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" ${OPTION_HOSTIP} ${OPTION_RFC} --server-role=dc --dns-backend=SAMBA_INTERNAL --adminpass="${DOMAINPASS}" --host-name="${HOSTNAME}" ${SAMBA_DEBUG_OPTION}
 	  {
         echo ""
         echo "[program:ChangeKRBTGT]"
