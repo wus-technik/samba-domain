@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -e
 set -x
 
 #Todo:
@@ -11,20 +10,17 @@ set -x
 #- Add   --option='idmap_ldb:use rfc2307 = yes'       on joining a new DC to support rfc-extension
 #- Bind Interface: https://github.com/moby/moby/issues/25181#issuecomment-618811417
 # Add Kerberos granting ticket pw auto changer https://gitlab.com/samba-team/samba/raw/v4-15-stable/source4/scripting/devel/chgkrbtgtpass
-# https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
 #gpo template ntp server https://docs.microsoft.com/de-de/services-hub/health/remediation-steps-ad/configure-the-root-pdc-with-an-authoritative-time-source-and-avoid-widespread-time-skew
 # Add the following line to allow a subnet to receive time service and query server statistics:  https://support.ntp.org/bin/view/Support/AccessRestrictions#Section_6.5.1.1.3.
 # time sync as client (beim join)
 
 appSetup () {
 
-  BIND_INTERFACE=${BIND_INTERFACE:-false}
-  INTERFACES=${INTERFACES:-eth0}
-
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
   DOMAINUSER=${DOMAINUSER:-Administrator}
   DOMAINPASS=${DOMAINPASS:-youshouldsetapassword}
+  DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
 
   LDOMAIN=${DOMAIN,,} #alllowercase
   UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
@@ -35,31 +31,53 @@ appSetup () {
   #URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
   #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
 
-  DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
   JOINSITE=${JOINSITE:-Default-First-Site-Name}
   JOIN=${JOIN:-false}
   MULTISITE=${MULTISITE:-false}
-  NOCOMPLEXITY=${NOCOMPLEXITY:-false}
-  INSECURELDAP=${INSECURELDAP:-false}
-  DNSFORWARDER=${DNSFORWARDER:-NONE}
+  
   HOSTIP=${HOSTIP:-NONE}
   HOSTNAME=${HOSTNAME:-$(hostname)}
   export HOSTNAME="$HOSTNAME"
-  TLS=${TLS:-false}
+  
+  ENABLE_TLS=${ENABLE_TLS:-false}
   TLS_PKI=${TLS_PKI:-false}
   PKI_O=${PKI_O:-Simple Root CA}
   PKI_OU=${PKI_OU:-Samba}
   PKI_CN=${PKI_CN:-Simple Samba Root CA}
-  LOGS=${LOGS:-false}
+  
+  DISABLE_PRINTING=${DISABLE_PRINTING:-true}
+  DISABLE_MD5=${DISABLE_MD5:-true}
+  DISABLE_PWCOMPLEXITY=${DISABLE_PWCOMPLEXITY:-false}
 
-  SCHEMA_LAPS=${SCHEMA_LAPS:-true}
-  RFC2307=${RFC2307:-false}
-
+  ENABLE_DYNAMIC_PORTRANGE=${ENABLE_DYNAMIC_PORTRANGE:-49152-49172} # Set DynamicPortRange
+  ENABLE_DNSFORWARDER=${ENABLE_DNSFORWARDER:-NONE}
+  ENABLE_LOGS=${ENABLE_LOGS:-false}
+  ENABLE_INSECURELDAP=${ENABLE_INSECURELDAP:-false}
+  ENABLE_LAPSSCHEMA=${ENABLE_LAPSSCHEMA:-true}
+  ENABLE_RFC2307=${ENABLE_RFC2307:-true}
+  ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
+  ENABLE_RECYCLEBIN=${ENABLE_RECYCLEBIN:-false}
+  ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
+  BIND_INTERFACES=${BIND_INTERFACES:-eth0} # Can be a list of interfaces
   NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
-
-  MSCHAPV2=${MSCHAPV2:-false}
+  
   DEBUG=${DEBUG:-true}
-  DEBUGLEVEL=${DEBUGLEVEL:-10}
+  DEBUGLEVEL=${DEBUGLEVEL:-1}
+  
+  #file variables
+  FILE_PREFIX=/var/lib/samba
+  FILE_SAMBAPRIV_BASE=$FILE_PREFIX/private
+  FILE_PKI_DH=$FILE_SAMBAPRIV_BASE/tls/dh.key
+  FILE_PKI_CA=$FILE_SAMBAPRIV_BASE/tls/ca.pem
+  FILE_PKI_KEY=$FILE_SAMBAPRIV_BASE/tls/key.pem
+  FILE_PKI_CERT=$FILE_SAMBAPRIV_BASE/tls/cert.pem
+  FILE_PKI_INT=$FILE_SAMBAPRIV_BASE/tls/intermediate.pem
+  FILE_PKI_CRL=$FILE_SAMBAPRIV_BASE/tls/crl.pem
+  FILE_SUPERVISORDCONF=/etc/supervisor/conf.d/supervisord.conf
+  FILE_SAMLDB=$FILE_SAMBAPRIV_BASE/sam.ldb
+  FILE_SAMBACONF=/etc/samba/smb.conf
+  FILE_SAMBACONFEXTERNAL=/etc/samba/external/smb.conf  
+   
 
   #Check if DOMAIN_NETBIOS <15 chars and contains no "."
   if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then
@@ -93,12 +111,12 @@ appSetup () {
     sleep 30
   fi
 
-  if [[ "$RFC2307" = true ]]; then
+  if [[ "$ENABLE_RFC2307" = true ]]; then
     if [[ "$JOIN" = true ]];then
-	  OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes'
-	else
+      OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes'
+    else
       OPTION_RFC=--use-rfc2307	  
-	fi
+    fi
   fi
   if [[ "$HOSTIP" != "NONE" ]]; then
     OPTION_HOSTIP=--host-ip="${HOSTIP}"
@@ -107,28 +125,30 @@ appSetup () {
     OPTION_JOIN=--site="${JOINSITE}"
   fi
   #fails due to space and wrong escaping of variables
-  if [[ "$DNSFORWARDER" != "NONE" ]]; then
-    OPTION_DNS_FWD=--option="dns forwarder=${DNSFORWARDER}"
+  if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then
+    OPTION_DNS_FWD=--option="dns forwarder=${ENABLE_DNSFORWARDER}"
   fi
-  if [[ "$BIND_INTERFACE" = true ]]; then
-    OPTION_INT=--option="interfaces=${INTERFACES,,} lo"
+  if [[ "$ENABLE_BIND_INTERFACE" = true ]]; then
+    OPTION_INT=--option="interfaces=${BIND_INTERFACES,,} lo"
     OPTION_BIND=--option="bind interfaces only = yes"
   fi
-
+  if [[ "$ENABLE_DYNAMIC_PORTRANGE" != "NONE" ]]; then
+    OPTION_RPC=--option="rpc server dynamic port range = ${ENABLE_DYNAMIC_PORTRANGE}"
+  fi
+	
   if [[ "$DEBUG" = true ]]; then
     SAMBA_DEBUG_OPTION="-d $DEBUGLEVEL"
     SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUGLEVEL"
     NTP_DEBUG_OPTION=""
     #NTP_DEBUG_OPTION="-D $DEBUGLEVEL"
-
   else
     SAMBA_DEBUG_OPTION=""
     NTP_DEBUG_OPTION=""
     SAMBADAEMON_DEBUG_OPTION=""
   fi
 
-  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i /etc/supervisor/conf.d/supervisord.conf
-  sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i /etc/supervisor/conf.d/supervisord.conf
+  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORDCONF}"
+  sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i "${FILE_SUPERVISORDCONF}"
 
   if [[ ! -d /etc/samba/external/ ]]; then
     mkdir /etc/samba/external
@@ -140,19 +160,19 @@ appSetup () {
     -i /etc/krb5.conf
 
   # If the finished file (external/smb.conf) doesn't exist, this is new container with empty volume, we're not just moving to a new container
-  if [[ ! -f /etc/samba/external/smb.conf ]]; then
-    if [[ -f /etc/samba/smb.conf ]]; then
-      mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
+  if [[ ! -f "${FILE_SAMBACONFEXTERNAL}" ]]; then
+    if [[ -f "${FILE_SAMBACONF}" ]]; then
+      mv "${FILE_SAMBACONF}" "${FILE_SAMBACONF}".orig
     fi
     # NOTE: DO not escape the missing variables below with "" it will break syntax
 	# Optional params without "" will break the command
     if [[ ${JOIN,,} = true ]]; then
 #	  if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
 	  n=0
-      until [ "$n" -ge 10 ]
+      until [ "$n" -eq 9 ]
 	  do
-        samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAINUSER}" ${OPTION_RFC} --password="${DOMAINPASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} && s=0 && break || s=$? && sleep 60
-		n++
+        samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAINUSER}" ${OPTION_RFC} --password="${DOMAINPASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} ${OPTION_INT} ${OPTION_BIND} ${OPTION_DNS_FWD} ${OPTION_RPC} && s=0 && break || s=$? && sleep 60
+		n=$(($n+1))
       done; (exit $s)
 	  # Netlogon & sysvol readonly on secondary DC
 	  {
@@ -164,9 +184,9 @@ appSetup () {
         echo "[sysvol]"
         echo "path = /var/lib/samba/sysvol"
         echo "read only = Yes"
-	  } >> /etc/samba/smb.conf
+	  } >> "${FILE_SAMBACONF}"
       #Check if Join was successfull
-	  if [ host -t A $HOSTNAME.$LDOMAIN. ];then
+	  if host -t A "$HOSTNAME"."$LDOMAIN".;then
 	    echo "found DNS host record"
       else
 	    echo "no DNS host record found. Running fix"
@@ -181,7 +201,11 @@ appSetup () {
 		 # samba-tool dns add DC1 _msdcs.samdom.example.com $objectGUID CNAME DC2.samdom.example.com -Uadministrator -p password
 	   #fi
     else
-      samba-tool domain provision "--domain=${DOMAIN_NETBIOS}" "--realm=${UDOMAIN}" "${OPTION_JOIN}" "--adminpass=${DOMAINPASS}" "--host-name=${HOSTNAME}" '--server-role=dc' '--dns-backend=SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC}  ${SAMBA_DEBUG_OPTION} || echo " Samba Domain Provisioning failed" && exit 1
+      samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAINPASS}" --host-name="${HOSTNAME}" --server-role='dc' --dns-backend='SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC} || echo " Samba Domain Provisioning failed" && exit 1
+
+      # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
+	  python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
+
 	  {
         echo ""
         echo "[program:ChangeKRBTGT]"
@@ -191,14 +215,14 @@ appSetup () {
         echo "stdout_logfile_backups=0"
 		echo "redirect_stderr=true"
         echo "priority=99"
-      } >> /etc/supervisor/conf.d/supervisord.conf
+      } >> "${FILE_SUPERVISORDCONF}"
 
       if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
         mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
       fi
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
-      if [[ "$RFC2307" = true ]]; then
+      if [[ "$ENABLE_RFC2307" = true ]]; then
         GID_DOM_USER=$((IMAP_GID_START))
         GID_DOM_ADMIN=$((IMAP_GID_START+1))
         GID_DOM_COMPUTERS=$((IMAP_GID_START+2))
@@ -249,21 +273,21 @@ appSetup () {
           -e "s:{{ IMAP_GID_END }}:$IMAP_GID_END:g" \
           /ldif/RFC_Domain_User_Group.ldif.j2 > /ldif/RFC_Domain_User_Group.ldif
 
-        ldbmodify -H /var/lib/samba/private/sam.ldb /ldif/RFC_Domain_User_Group.ldif -U "${DOMAINUSER}"
+        ldbmodify -H "${FILE_SAMLDB}" /ldif/RFC_Domain_User_Group.ldif -U "${DOMAINUSER}"
       fi
       #Microsoft Local Administrator Password Solution (LAPS)
-      if [[ "$SCHEMA_LAPS" = true ]]; then
+      if [[ "$ENABLE_LAPSSCHEMA" = true ]]; then
         sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
           /ldif/laps-1.ldif.j2 > /ldif/laps-1.ldif
 
         sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
           /ldif/laps-2.ldif.j2 > /ldif/laps-2.ldif
 
-        ldbadd -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /ldif/laps-1.ldif -U "${DOMAINUSER}"
-        ldbmodify -H /var/lib/samba/private/sam.ldb --option="dsdb:schema update allowed"=true /ldif/laps-2.ldif -U "${DOMAINUSER}"
+        ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true /ldif/laps-1.ldif -U "${DOMAINUSER}"
+        ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true /ldif/laps-2.ldif -U "${DOMAINUSER}"
       fi
 
-      if [[ ${NOCOMPLEXITY,,} = true ]]; then
+      if [[ ${DISABLE_PWCOMPLEXITY,,} = true ]]; then
         samba-tool domain passwordsettings set --complexity=off "${SAMBA_DEBUG_OPTION}"
         samba-tool domain passwordsettings set --history-length=0 "${SAMBA_DEBUG_OPTION}"
         samba-tool domain passwordsettings set --min-pwd-age=0 "${SAMBA_DEBUG_OPTION}"
@@ -276,35 +300,17 @@ appSetup () {
       echo '!'"root = ${DOMAIN}\\${DOMAINUSER}" > /etc/samba/user.map
       sed -i "/\[global\]/a \
 username map = /etc/samba/user.map\
-    " /etc/samba/smb.conf
+    " "${FILE_SAMBACONF}"
     fi
 
-    #if [ "${BIND_INTERFACE,,}" = true ]; then
-      #    sed -i "/\[global\]/a \
-        #interfaces =${INTERFACES,,} lo\\n\
-        #bind interfaces only = yes\
-        #    " /etc/samba/smb.conf
-    #  printf >> "interface listen lo" /etc/ntp.conf
-    #  for INTERFACE in $INTERFACES
-    #  do
-    #    printf >> "interface listen $INTERFACE"
-    #  done
-
-    #fi
-    ###################
-    # limit dynamic rpc port from 49152-65535 to 49172 so we can proxy them (otherwise we run out of memory)
-    sed -i "/\[global\]/a \
-rpc server dynamic port range = 49152-49172\
-        " /etc/samba/smb.conf
-    ###################
-    if [[ $DNSFORWARDER != "NONE" ]]; then
-      sed -i '/dns forwarder/d' /etc/samba/smb.conf
+    if [[ $ENABLE_DNSFORWARDER != "NONE" ]]; then
+      sed -i '/dns forwarder/d' "${FILE_SAMBACONF}"
       sed -i "/\[global\]/a \
-dns forwarder = ${DNSFORWARDER}\
-        " /etc/samba/smb.conf
+dns forwarder = ${ENABLE_DNSFORWARDER}\
+        " "${FILE_SAMBACONF}"
     fi
 
-    if [[ ${TLS,,} = true ]]; then
+    if [[ ${ENABLE_TLS,,} = true ]]; then
 	  if [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
 	  
 print "empty if clause - work with me"
@@ -322,23 +328,20 @@ tls cafile   = tls/ca.pem\\n\
 tls dh params file = tls/dh.key\\n\
 #tls crlfile   = tls/crl.pem\\n\
 #tls verify peer = ca_and_name\
-    " /etc/samba/smb.conf
-
-      # Prevent downgrade attacks to md5
-      sed -i "/\[global\]/a \
-reject md5 clients = yes\\n\
-reject md5 servers = yes\
-    " /etc/samba/smb.conf
+    " "${FILE_SAMBACONF}"
     fi
 
-    if [[ ${MSCHAPV2,,} = true ]]; then
+
+    if [[ ${ENABLE_MSCHAPV2,,} = true ]]; then
       sed -i "/\[global\]/a \
 ntlm auth = mschapv2-and-ntlmv2-only\
-    " /etc/samba/smb.conf
+    " "${FILE_SAMBACONF}"
     fi
 
+# https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
     sed -i "/\[global\]/a \
-wins support = yes\\n\
+#wins support = yes\\n\
+password hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
 # Template settings for login shell and home directory\\n\
 template shell = /bin/bash\\n\
 template homedir = /home/%U\\n\
@@ -346,25 +349,20 @@ load printers = no\\n\
 printing = bsd\\n\
 printcap name = /dev/null\\n\
 disable spoolss = yes\
-    " /etc/samba/smb.conf
+    " "${FILE_SAMBACONF}"
+	
+    if [[ ${DISABLE_MD5,,} = true ]]; then
+      # Prevent downgrade attacks to md5
+      sed -i "/\[global\]/a \
+reject md5 clients = yes\\n\
+reject md5 servers = yes\\n\
+    " "${FILE_SAMBACONF}"
+    fi
 
-#    if [[ ${LOGS,,} = true ]]; then
-#      sed -i "/\[global\]/a \
-#log file = /var/log/samba/%m.log\\n\
-#max log size = 10000\\n\
-#log level = 1\
-#      " /etc/samba/smb.conf
-#    else
-#      sed -i "/\[global\]/a \
-#log level = 0\\n\
-#      " /etc/samba/smb.conf
-#sed -i '/FILE:/s/^#//g' /etc/krb5.conf
-#    fi
-
-    if [[ ${INSECURELDAP,,} = true ]]; then
+    if [[ ${ENABLE_INSECURELDAP,,} = true ]]; then
       sed -i "/\[global\]/a \
 ldap server require strong auth = no\
-      " /etc/samba/smb.conf
+      " "${FILE_SAMBACONF}"
     fi
 
     # nsswitch anpassen
@@ -373,15 +371,14 @@ ldap server require strong auth = no\
     sed -i "s,hosts:.*,hosts:          files dns,g" "/etc/nsswitch.conf"
     sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
 
-
     # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
-    cp -f /etc/samba/smb.conf /etc/samba/external/smb.conf
+    cp -f "${FILE_SAMBACONF}" "${FILE_SAMBACONFEXTERNAL}"
   else
-    cp -f /etc/samba/external/smb.conf /etc/samba/smb.conf
+    cp -f "${FILE_SAMBACONFEXTERNAL}" "${FILE_SAMBACONF}"
   fi
     # https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
   	#Test Kerberos
-	if [ echo "${DOMAINPASS}" | kinit "${DOMAINUSER}" ];then
+	if echo "${DOMAINPASS}" | kinit "${DOMAINUSER}";then
 	  echo " kinit successfull"
 	  klist
     fi
@@ -404,7 +401,7 @@ ldap server require strong auth = no\
       echo "stdout_logfile_backups=0"
 	  echo "redirect_stderr=true"
       echo "priority=1"
-    } >> /etc/supervisor/conf.d/supervisord.conf
+    } >> "${FILE_SUPERVISORDCONF}"
   fi
 
   if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
@@ -429,6 +426,7 @@ ldap server require strong auth = no\
   chown root:ntp /var/lib/samba/ntp_signd/
   chmod 750 /var/lib/samba/ntp_signd/
 
+# Not needed on Samba 4.15 with ubuntu:devel
 #  if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
 #    mkdir /var/lib/samba/winbindd_privileged/
 #    chown root:winbindd_priv /var/lib/samba/winbindd_privileged/
@@ -438,24 +436,52 @@ ldap server require strong auth = no\
 #    chmod 0750 /var/lib/samba/winbindd_privileged
 #  fi
 
+#    if [[ ${ENABLE_LOGS,,} = true ]]; then
+#      sed -i "/\[global\]/a \
+#log file = /var/log/samba/%m.log\\n\
+#max log size = 10000\\n\
+#log level = 1\
+#      " /etc/samba/smb.conf
+#    else
+#      sed -i "/\[global\]/a \
+#log level = 0\\n\
+#      " /etc/samba/smb.conf
+#sed -i '/FILE:/s/^#//g' /etc/krb5.conf
+#    fi
+
+    #if [ "${ENABLE_BIND_INTERFACE,,}" = true ]; then
+      #    sed -i "/\[global\]/a \
+        #interfaces =${BIND_INTERFACES,,} lo\\n\
+        #bind interfaces only = yes\
+        #    " /etc/samba/smb.conf
+    #  printf >> "interface listen lo" /etc/ntp.conf
+    #  for INTERFACE in $BIND_INTERFACES
+    #  do
+    #    printf >> "interface listen $INTERFACE"
+    #  done
+    #fi
+    ###################
+    # limit dynamic rpc port from 49152-65535 to 49172 so we can proxy them (otherwise we run out of memory)
+    #sed -i "/\[global\]/a \
+rpc server dynamic port range = 49152-49172\
+        " "${FILE_SAMBACONF}"
+    ###################
   appFirstStart
 }
 
 appFirstStart () {
-  /usr/bin/supervisord -c "/etc/supervisor/supervisord.conf"
   #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
   net rpc rights grant "$UDOMAIN\Domain Admins" SeDiskOperatorPrivilege -U"$UDOMAIN\${DOMAINUSER,,}" "${DEBUG_OPTION}"
+  /usr/bin/supervisord -c "/etc/supervisor/supervisord.conf"
 }
 
 appStart () {
-  # Check for samdb errors
-  samba-tool dbcheck --cross-ncs --fix --yes
   /usr/bin/supervisord
 }
 
 # If the supervisor conf isn't there, we're spinning up a new container
-if [[ -f /etc/samba/external/smb.conf ]]; then
-  cp /etc/samba/external/smb.conf /etc/samba/smb.conf
+if [[ -f "${FILE_SAMBACONFEXTERNAL}" ]]; then
+  cp "${FILE_SAMBACONFEXTERNAL}" "${FILE_SAMBACONF}"
   appStart
 else
   appSetup
