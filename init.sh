@@ -9,7 +9,6 @@ set -x
 # SYSVOL replication:
 #- Add   --option='idmap_ldb:use rfc2307 = yes'       on joining a new DC to support rfc-extension
 #- Bind Interface: https://github.com/moby/moby/issues/25181#issuecomment-618811417
-# Add Kerberos granting ticket pw auto changer https://gitlab.com/samba-team/samba/raw/v4-15-stable/source4/scripting/devel/chgkrbtgtpass
 #gpo template ntp server https://docs.microsoft.com/de-de/services-hub/health/remediation-steps-ad/configure-the-root-pdc-with-an-authoritative-time-source-and-avoid-widespread-time-skew
 # Add the following line to allow a subnet to receive time service and query server statistics:  https://support.ntp.org/bin/view/Support/AccessRestrictions#Section_6.5.1.1.3.
 # time sync as client (beim join)
@@ -203,8 +202,10 @@ appSetup () {
     else
       samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAINPASS}" --host-name="${HOSTNAME}" --server-role='dc' --dns-backend='SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC} || echo " Samba Domain Provisioning failed" && exit 1
 
-      # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
-	  python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
+	  if [[ "$ENABLE_RECYCLEBIN" = true ]]; then
+        # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
+	    python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
+      fi
 
 	  {
         echo ""
@@ -279,10 +280,8 @@ appSetup () {
       if [[ "$ENABLE_LAPSSCHEMA" = true ]]; then
         sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
           /ldif/laps-1.ldif.j2 > /ldif/laps-1.ldif
-
         sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
           /ldif/laps-2.ldif.j2 > /ldif/laps-2.ldif
-
         ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true /ldif/laps-1.ldif -U "${DOMAINUSER}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true /ldif/laps-2.ldif -U "${DOMAINUSER}"
       fi
@@ -330,7 +329,6 @@ tls dh params file = tls/dh.key\\n\
 #tls verify peer = ca_and_name\
     " "${FILE_SAMBACONF}"
     fi
-
 
     if [[ ${ENABLE_MSCHAPV2,,} = true ]]; then
       sed -i "/\[global\]/a \
