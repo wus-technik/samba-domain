@@ -24,7 +24,7 @@ appSetup () {
   #LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
   #UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
   #URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
-  
+
   #DN for LDIF
   LDAPSUFFIX=""
   IFS='.'
@@ -38,18 +38,18 @@ appSetup () {
   JOINSITE=${JOINSITE:-Default-First-Site-Name}
   JOIN=${JOIN:-false}
   MULTISITE=${MULTISITE:-false}
-  
+
   HOSTIP=${HOSTIP:-NONE}
   #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
   HOSTNAME=${HOSTNAME:-$(hostname)}
   export HOSTNAME="$HOSTNAME"
-  
+
   ENABLE_TLS=${ENABLE_TLS:-false}
   TLS_PKI=${TLS_PKI:-false}
   PKI_O=${PKI_O:-Simple Root CA}
   PKI_OU=${PKI_OU:-Samba}
   PKI_CN=${PKI_CN:-Simple Samba Root CA}
-  
+
   DISABLE_PRINTING=${DISABLE_PRINTING:-true}
   DISABLE_MD5=${DISABLE_MD5:-true}
   DISABLE_PWCOMPLEXITY=${DISABLE_PWCOMPLEXITY:-false}
@@ -62,10 +62,10 @@ appSetup () {
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RECYCLEBIN=${ENABLE_RECYCLEBIN:-false}
-  
+
   ENABLE_DEBUG=${ENABLE_DEBUG:-true}
   DEBUGLEVEL=${DEBUGLEVEL:-1}
-  
+
   ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
   BIND_INTERFACES=${BIND_INTERFACES:-eth0} # Can be a list of interfaces
 
@@ -82,7 +82,7 @@ appSetup () {
   FILE_SAMLDB=$FILE_SAMBAPRIV_BASE/sam.ldb
   FILE_SAMBACONF=/etc/samba/smb.conf
   FILE_SAMBACONFEXTERNAL=/etc/samba/external/smb.conf
-  
+
   FILE_SUPERVISORDCONF=/etc/supervisor/conf.d/supervisord.conf
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_KRB5=/etc/krb5.conf
@@ -116,27 +116,32 @@ appSetup () {
     if [[ "$JOIN" = true ]];then
       OPTION_RFC=--option='idmap_ldb:use rfc2307 = yes'
     else
-      OPTION_RFC=--use-rfc2307	  
+      OPTION_RFC=--use-rfc2307
     fi
   fi
+
   if [[ "$HOSTIP" != "NONE" ]]; then
     OPTION_HOSTIP=--host-ip="${HOSTIP}"
   fi
+
   if [[ "$JOINSITE" != "NONE" ]]; then
     OPTION_JOIN=--site="${JOINSITE}"
   fi
+
   #fails due to space and wrong escaping of variables
   if [[ "$ENABLE_DNSFORWARDER" != "NONE" ]]; then
     OPTION_DNS_FWD=--option="dns forwarder=${ENABLE_DNSFORWARDER}"
   fi
+
   if [[ "$ENABLE_BIND_INTERFACE" = true ]]; then
     OPTION_INT=--option="interfaces=${BIND_INTERFACES,,} lo"
     OPTION_BIND=--option="bind interfaces only = yes"
   fi
+
   if [[ "$ENABLE_DYNAMIC_PORTRANGE" != "NONE" ]]; then
     OPTION_RPC=--option="rpc server dynamic port range = ${ENABLE_DYNAMIC_PORTRANGE}"
   fi
-	
+
   if [[ "$ENABLE_DEBUG" = true ]]; then
     SAMBA_DEBUG_OPTION="-d $DEBUGLEVEL"
     SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUGLEVEL"
@@ -160,17 +165,17 @@ appSetup () {
       mv "${FILE_SAMBACONF}" "${FILE_SAMBACONF}".orig
     fi
     # NOTE: DO not escape the missing variables below with "" it will break syntax
-	# Optional params without "" will break the command
+    # Optional params without "" will break the command
     if [[ ${JOIN,,} = true ]]; then
-#	  if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
-	  n=0
+#     if [ "$(dig +short -t srv _ldap._tcp.$LDOMAIN.)" ] && echo "got answer"
+      n=0
       until [ "$n" -eq 9 ]
-	  do
+      do
         samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAINUSER}" ${OPTION_RFC} --password="${DOMAINPASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} ${OPTION_INT} ${OPTION_BIND} ${OPTION_DNS_FWD} ${OPTION_RPC} && s=0 && break || s=$? && sleep 60
-		n=$(($n+1))
+        n=$(($n+1))
       done; (exit $s)
-	  # Netlogon & sysvol readonly on secondary DC
-	  {
+      # Netlogon & sysvol readonly on secondary DC
+      {
         echo " "
         echo "[netlogon]"
         echo "path = /var/lib/samba/sysvol/test.dom/scripts"
@@ -179,38 +184,38 @@ appSetup () {
         echo "[sysvol]"
         echo "path = /var/lib/samba/sysvol"
         echo "read only = Yes"
-	  } >> "${FILE_SAMBACONF}"
+      } >> "${FILE_SAMBACONF}"
       #Check if Join was successfull
-	  if host -t A "$HOSTNAME"."$LDOMAIN".;then
-	    echo "found DNS host record"
+      if host -t A "$HOSTNAME"."$LDOMAIN".;then
+        echo "found DNS host record"
       else
-	    echo "no DNS host record found. Running fix"
-		#samba-tool dns add DC1 samdom.example.com DC2 A 10.99.0.2 -Uadministrator
-	  fi
-	  # [https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record]
-	   # on existing DC e.g DC01
-	   # objectGUIDs = ldbsearch -H /usr/local/samba/private/sam.ldb '(invocationId=*)' --cross-ncs objectguid | grep objectguid
-	   #foreach objectGUID in objectGUIDs
-	   # if [ host -t CNAME $objectGUID._msdcs.samdom.example.com. ];then
-	     # samba-tool dns add DC1 _msdcs.samdom.example.com df4bdd8c-abc7-4779-b01e-4dd4553ca3e9 CNAME DC2.samdom.example.com -Uadministrator
-		 # samba-tool dns add DC1 _msdcs.samdom.example.com $objectGUID CNAME DC2.samdom.example.com -Uadministrator -p password
-	   #fi
+        echo "no DNS host record found. Running fix"
+        #samba-tool dns add DC1 samdom.example.com DC2 A 10.99.0.2 -Uadministrator
+      fi
+      # [https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record]
+       # on existing DC e.g DC01
+       # objectGUIDs = ldbsearch -H /usr/local/samba/private/sam.ldb '(invocationId=*)' --cross-ncs objectguid | grep objectguid
+       #foreach objectGUID in objectGUIDs
+       # if [ host -t CNAME $objectGUID._msdcs.samdom.example.com. ];then
+         # samba-tool dns add DC1 _msdcs.samdom.example.com df4bdd8c-abc7-4779-b01e-4dd4553ca3e9 CNAME DC2.samdom.example.com -Uadministrator
+         # samba-tool dns add DC1 _msdcs.samdom.example.com $objectGUID CNAME DC2.samdom.example.com -Uadministrator -p password
+       #fi
     else
       samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAINPASS}" --host-name="${HOSTNAME}" --server-role=dc --dns-backend=SAMBA_INTERNAL ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_DNS_FWD} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC}
 
-	  if [[ "$ENABLE_RECYCLEBIN" = true ]]; then
+      if [[ "$ENABLE_RECYCLEBIN" = true ]]; then
         # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
-	    python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
+        python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
       fi
 
-	  {
+      {
         echo ""
         echo "[program:ChangeKRBTGT]"
         echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
         echo "stdout_logfile=/dev/fd/1"
         echo "stdout_logfile_maxbytes=0"
         echo "stdout_logfile_backups=0"
-		echo "redirect_stderr=true"
+        echo "redirect_stderr=true"
         echo "priority=99"
       } >> "${FILE_SUPERVISORDCONF}"
 
@@ -301,16 +306,15 @@ username map = /etc/samba/user.map\
     if [[ $ENABLE_DNSFORWARDER != "NONE" ]]; then
       sed -i '/dns forwarder/d' "${FILE_SAMBACONF}"
       sed -i "/\[global\]/a \
-dns forwarder = ${ENABLE_DNSFORWARDER}\
+        \\\tdns forwarder = ${ENABLE_DNSFORWARDER}\
         " "${FILE_SAMBACONF}"
     fi
 
     if [[ ${ENABLE_TLS,,} = true ]]; then
-	  if [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
-	  
+      if [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
 print "empty if clause - work with me"
       fi
-	  if [ ! -f /var/lib/samba/private/tls/dh.key ]; then
+      if [ ! -f /var/lib/samba/private/tls/dh.key ]; then
         openssl dhparam -out /var/lib/samba/private/tls/dh.key 2048
       fi
 
@@ -341,14 +345,14 @@ template shell = /bin/bash\\n\
 template homedir = /home/%U\
     " "${FILE_SAMBACONF}"
 
-	if [[ ${DISABLE_PRINTING,,} = true ]]; then
-	  sed -i "/\[global\]/a \
+    if [[ ${DISABLE_PRINTING,,} = true ]]; then
+      sed -i "/\[global\]/a \
 load printers = no\\n\
 printing = bsd\\n\
 printcap name = /dev/null\\n\
 disable spoolss = yes\
     " "${FILE_SAMBACONF}"
-	fi
+    fi
 
     if [[ ${DISABLE_MD5,,} = true ]]; then
       # Prevent downgrade attacks to md5
@@ -376,16 +380,16 @@ ldap server require strong auth = no\
     cp -f "${FILE_SAMBACONFEXTERNAL}" "${FILE_SAMBACONF}"
   fi
     # https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
-  	#Test Kerberos
-	if echo "${DOMAINPASS}" | kinit "${DOMAINUSER}";then
-	  echo " kinit successfull"
-	  klist
+    #Test Kerberos
+    if echo "${DOMAINPASS}" | kinit "${DOMAINUSER}";then
+      echo " kinit successfull"
+      klist
     fi
-	# Verify Samba Fileserver is working
-	smbclient -L localhost -N
-	# Test Samba Auth
-	smbclient //localhost/netlogon -U"${DOMAINUSER}" -c 'ls' --password "${DOMAINPASS}"
-	
+    # Verify Samba Fileserver is working
+    #smbclient -L localhost -N
+    # Test Samba Auth
+    #smbclient //localhost/netlogon -U"${DOMAINUSER}" -c 'ls' --password "${DOMAINPASS}"
+
   # Stop VPN & write supervisor service
   if [[ ${MULTISITE,,} = true ]]; then
     if [[ -n $VPNPID ]]; then
@@ -398,7 +402,7 @@ ldap server require strong auth = no\
       echo "stdout_logfile=/dev/fd/1"
       echo "stdout_logfile_maxbytes=0"
       echo "stdout_logfile_backups=0"
-	  echo "redirect_stderr=true"
+      echo "redirect_stderr=true"
       echo "priority=1"
     } >> "${FILE_SUPERVISORDCONF}"
   fi
