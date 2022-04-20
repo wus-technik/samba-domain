@@ -3,13 +3,8 @@
 set -x
 
 #Todo:
-#create Keytab:  net ads keytab create ${SAMBA_DEBUG_OPTION} und kerberos method = secrets and keytab
-#Drop privileges: https://medium.com/@mccode/processes-in-containers-should-not-run-as-root-2feae3f0df3b
 # ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
 # SYSVOL replication:
-#- Add   --option='idmap_ldb:use rfc2307 = yes'       on joining a new DC to support rfc-extension
-#- Bind Interface: https://github.com/moby/moby/issues/25181#issuecomment-618811417
-#gpo template ntp server https://docs.microsoft.com/de-de/services-hub/health/remediation-steps-ad/configure-the-root-pdc-with-an-authoritative-time-source-and-avoid-widespread-time-skew
 # Add the following line to allow a subnet to receive time service and query server statistics:  https://support.ntp.org/bin/view/Support/AccessRestrictions#Section_6.5.1.1.3.
 # time sync as client (beim join)
 
@@ -24,17 +19,28 @@ appSetup () {
   LDOMAIN=${DOMAIN,,} #alllowercase
   UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
   URDOMAIN=${UDOMAIN%%.*} #trim
+
   #Posix
   #LDOMAIN=$(echo "$DOMAIN" | tr '[:upper:]' '[:lower:]')
   #UDOMAIN=$(echo "$LDOMAIN" | tr '[:lower:]' '[:upper:]')
   #URDOMAIN=$(echo "$UDOMAIN" | cut -d "." -f1)
-  #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
+  
+  #DN for LDIF
+  LDAPSUFFIX=""
+  IFS='.'
+  for dn in ${LDOMAIN}; do
+    LDAPSUFFIX="${LDAPSUFFIX},DC=$dn"
+  done
+  IFS=''
+
+  NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
 
   JOINSITE=${JOINSITE:-Default-First-Site-Name}
   JOIN=${JOIN:-false}
   MULTISITE=${MULTISITE:-false}
   
   HOSTIP=${HOSTIP:-NONE}
+  #Change if hostname includes DNS/DOMAIN SUFFIX e.g. host.example.com - it should only display host
   HOSTNAME=${HOSTNAME:-$(hostname)}
   export HOSTNAME="$HOSTNAME"
   
@@ -56,37 +62,31 @@ appSetup () {
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RECYCLEBIN=${ENABLE_RECYCLEBIN:-false}
-  ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
-  BIND_INTERFACES=${BIND_INTERFACES:-eth0} # Can be a list of interfaces
-  NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
   
-  DEBUG=${DEBUG:-true}
+  ENABLE_DEBUG=${ENABLE_DEBUG:-true}
   DEBUGLEVEL=${DEBUGLEVEL:-1}
   
+  ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
+  BIND_INTERFACES=${BIND_INTERFACES:-eth0} # Can be a list of interfaces
+
   #file variables
-  FILE_PREFIX=/var/lib/samba
-  FILE_SAMBAPRIV_BASE=$FILE_PREFIX/private
+  DIR_SAMBADATAPREFIX=/var/lib/samba
+  DIR_SCRIPTS=/scripts
+  FILE_SAMBAPRIV_BASE=$DIR_SAMBADATAPREFIX/private
   FILE_PKI_DH=$FILE_SAMBAPRIV_BASE/tls/dh.key
   FILE_PKI_CA=$FILE_SAMBAPRIV_BASE/tls/ca.pem
   FILE_PKI_KEY=$FILE_SAMBAPRIV_BASE/tls/key.pem
   FILE_PKI_CERT=$FILE_SAMBAPRIV_BASE/tls/cert.pem
   FILE_PKI_INT=$FILE_SAMBAPRIV_BASE/tls/intermediate.pem
   FILE_PKI_CRL=$FILE_SAMBAPRIV_BASE/tls/crl.pem
-  FILE_SUPERVISORDCONF=/etc/supervisor/conf.d/supervisord.conf
   FILE_SAMLDB=$FILE_SAMBAPRIV_BASE/sam.ldb
   FILE_SAMBACONF=/etc/samba/smb.conf
-  FILE_SAMBACONFEXTERNAL=/etc/samba/external/smb.conf  
-   
-
-  #Check if DOMAIN_NETBIOS <15 chars and contains no "."
-  if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then
-    echo "DOMAIN_NETBIOS too long => exiting"
-    #exit 1
-  fi
-  if [[ $DOMAIN_NETBIOS == *"."* ]]; then
-    echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting"
-    exit 1
-  fi
+  FILE_SAMBACONFEXTERNAL=/etc/samba/external/smb.conf
+  
+  FILE_SUPERVISORDCONF=/etc/supervisor/conf.d/supervisord.conf
+  FILE_OPENVPNCONF=/docker.ovpn
+  FILE_KRB5=/etc/krb5.conf
+  FILE_NSSWITCH=/etc/nsswitch.conf
 
   # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
   # IT does nothing on DCs as they shall not use idmap settings.
@@ -95,16 +95,18 @@ appSetup () {
   IMAP_ID_START=${IMAP_UID_START:-10000}
   IMAP_UID_START=${IMAP_UID_START:-$IMAP_ID_START}
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
-  #DN for LDIF
-  LDAPDN=""
-  IFS='.'
-  for dn in ${LDOMAIN}; do
-    LDAPDN="${LDAPDN},DC=$dn"
-  done
-  IFS=''
+
+  #Check if DOMAIN_NETBIOS <15 chars and contains no "."
+  if [[ ${#DOMAIN_NETBIOS} -gt 15 ]]; then
+    echo "DOMAIN_NETBIOS too long => exiting" && exit 1
+  fi
+  if [[ $DOMAIN_NETBIOS == *"."* ]]; then
+    echo "DOMAIN_NETBIOS contains forbiden char    .     => exiting" && exit 1
+  fi
+
   # If multi-site, we need to connect to the VPN before joining the domain
   if [[ ${MULTISITE,,} = true ]]; then
-    /usr/sbin/openvpn --config /docker.ovpn &
+    /usr/sbin/openvpn --config ${FILE_OPENVPNCONF} &
     VPNPID=$!
     echo "Sleeping 30s to ensure VPN connects ($VPNPID)";
     sleep 30
@@ -135,19 +137,13 @@ appSetup () {
     OPTION_RPC=--option="rpc server dynamic port range = ${ENABLE_DYNAMIC_PORTRANGE}"
   fi
 	
-  if [[ "$DEBUG" = true ]]; then
+  if [[ "$ENABLE_DEBUG" = true ]]; then
     SAMBA_DEBUG_OPTION="-d $DEBUGLEVEL"
     SAMBADAEMON_DEBUG_OPTION="--debug-stdout -d $DEBUGLEVEL"
-    NTP_DEBUG_OPTION=""
-    #NTP_DEBUG_OPTION="-D $DEBUGLEVEL"
-  else
-    SAMBA_DEBUG_OPTION=""
-    NTP_DEBUG_OPTION=""
-    SAMBADAEMON_DEBUG_OPTION=""
+    NTP_DEBUG_OPTION="-D $DEBUGLEVEL"
+    sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORDCONF}"
+    sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i "${FILE_SUPERVISORDCONF}"
   fi
-
-  sed -e "s:{{ SAMBADAEMON_DEBUG_OPTION }}:$SAMBADAEMON_DEBUG_OPTION:" -i "${FILE_SUPERVISORDCONF}"
-  sed -e "s:{{ NTP_DEBUG_OPTION }}:$NTP_DEBUG_OPTION:" -i "${FILE_SUPERVISORDCONF}"
 
   if [[ ! -d /etc/samba/external/ ]]; then
     mkdir /etc/samba/external
@@ -156,7 +152,7 @@ appSetup () {
   sed -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
     -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
     -e "s:{{ HOSTNAME }}:$HOSTNAME:" \
-    -i /etc/krb5.conf
+    -i "$FILE_KRB5"
 
   # If the finished file (external/smb.conf) doesn't exist, this is new container with empty volume, we're not just moving to a new container
   if [[ ! -f "${FILE_SAMBACONFEXTERNAL}" ]]; then
@@ -200,7 +196,7 @@ appSetup () {
 		 # samba-tool dns add DC1 _msdcs.samdom.example.com $objectGUID CNAME DC2.samdom.example.com -Uadministrator -p password
 	   #fi
     else
-      samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAINPASS}" --host-name="${HOSTNAME}" --server-role='dc' --dns-backend='SAMBA_INTERNAL' ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC} || echo " Samba Domain Provisioning failed" && exit 1
+      samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAINPASS}" --host-name="${HOSTNAME}" --server-role=dc --dns-backend=SAMBA_INTERNAL ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_DNS_FWD} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC}
 
 	  if [[ "$ENABLE_RECYCLEBIN" = true ]]; then
         # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
@@ -249,7 +245,7 @@ appSetup () {
         IMAP_GID_END=$((IMAP_GID_START+16))
         IMAP_UID_END=$((IMAP_UID_START+3))
 
-        sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
+        sed -e "s: {{ LDAPDN }}:$LDAPSUFFIX:g" \
           -e "s:{{ NETBIOS }}:${DOMAIN_NETBIOS,,}:g" \
           -e "s:{{ GID_DOM_USER }}:$GID_DOM_USER:g" \
           -e "s:{{ GID_DOM_ADMIN }}:$GID_DOM_ADMIN:g" \
@@ -278,9 +274,9 @@ appSetup () {
       fi
       #Microsoft Local Administrator Password Solution (LAPS)
       if [[ "$ENABLE_LAPSSCHEMA" = true ]]; then
-        sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
+        sed -e "s: {{ LDAPDN }}:$LDAPSUFFIX:g" \
           /ldif/laps-1.ldif.j2 > /ldif/laps-1.ldif
-        sed -e "s: {{ LDAPDN }}:$LDAPDN:g" \
+        sed -e "s: {{ LDAPDN }}:$LDAPSUFFIX:g" \
           /ldif/laps-2.ldif.j2 > /ldif/laps-2.ldif
         ldbadd -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true /ldif/laps-1.ldif -U "${DOMAINUSER}"
         ldbmodify -H "${FILE_SAMLDB}" --option="dsdb:schema update allowed"=true /ldif/laps-2.ldif -U "${DOMAINUSER}"
@@ -342,13 +338,18 @@ ntlm auth = mschapv2-and-ntlmv2-only\
 password hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
 # Template settings for login shell and home directory\\n\
 template shell = /bin/bash\\n\
-template homedir = /home/%U\\n\
+template homedir = /home/%U\
+    " "${FILE_SAMBACONF}"
+
+	if [[ ${DISABLE_PRINTING,,} = true ]]; then
+	  sed -i "/\[global\]/a \
 load printers = no\\n\
 printing = bsd\\n\
 printcap name = /dev/null\\n\
 disable spoolss = yes\
     " "${FILE_SAMBACONF}"
-	
+	fi
+
     if [[ ${DISABLE_MD5,,} = true ]]; then
       # Prevent downgrade attacks to md5
       sed -i "/\[global\]/a \
@@ -364,10 +365,10 @@ ldap server require strong auth = no\
     fi
 
     # nsswitch anpassen
-    sed -i "s,passwd:.*,passwd:         files winbind,g" "/etc/nsswitch.conf"
-    sed -i "s,group:.*,group:          files winbind,g" "/etc/nsswitch.conf"
-    sed -i "s,hosts:.*,hosts:          files dns,g" "/etc/nsswitch.conf"
-    sed -i "s,networks:.*,networks:      files dns,g" "/etc/nsswitch.conf"
+    sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
+    sed -i "s,group:.*,group:          files winbind,g" "$FILE_NSSWITCH"
+    sed -i "s,hosts:.*,hosts:          files dns,g" "$FILE_NSSWITCH"
+    sed -i "s,networks:.*,networks:      files dns,g" "$FILE_NSSWITCH"
 
     # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
     cp -f "${FILE_SAMBACONF}" "${FILE_SAMBACONFEXTERNAL}"
@@ -393,7 +394,7 @@ ldap server require strong auth = no\
     {
       echo ""
       echo "[program:openvpn]"
-      echo "command=/usr/sbin/openvpn --config /docker.ovpn"
+      echo "command=/usr/sbin/openvpn --config $FILE_OPENVPNCONF"
       echo "stdout_logfile=/dev/fd/1"
       echo "stdout_logfile_maxbytes=0"
       echo "stdout_logfile_backups=0"
@@ -444,7 +445,7 @@ ldap server require strong auth = no\
 #      sed -i "/\[global\]/a \
 #log level = 0\\n\
 #      " /etc/samba/smb.conf
-#sed -i '/FILE:/s/^#//g' /etc/krb5.conf
+#sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
 #    fi
 
     #if [ "${ENABLE_BIND_INTERFACE,,}" = true ]; then
@@ -461,8 +462,8 @@ ldap server require strong auth = no\
     ###################
     # limit dynamic rpc port from 49152-65535 to 49172 so we can proxy them (otherwise we run out of memory)
     #sed -i "/\[global\]/a \
-rpc server dynamic port range = 49152-49172\
-        " "${FILE_SAMBACONF}"
+#rpc server dynamic port range = 49152-49172\
+#        " "${FILE_SAMBACONF}"
     ###################
   appFirstStart
 }
