@@ -50,7 +50,7 @@ appSetup () {
   PKI_OU=${PKI_OU:-Samba}
   PKI_CN=${PKI_CN:-Simple Samba Root CA}
 
-  DISABLE_PRINTING=${DISABLE_PRINTING:-true}
+  ENABLE_CUPS=${ENABLE_CUPS:-true}
   DISABLE_MD5=${DISABLE_MD5:-true}
   DISABLE_PWCOMPLEXITY=${DISABLE_PWCOMPLEXITY:-false}
 
@@ -345,7 +345,15 @@ template shell = /bin/bash\\n\
 template homedir = /home/%U\
     " "${FILE_SAMBACONF}"
 
-    if [[ ${DISABLE_PRINTING,,} = true ]]; then
+    if [[ ${ENABLE_CUPS,,} = true ]]; then
+      sed -i "/\[global\]/a \
+load printers = yes\\n\
+printing = cups\\n\
+cups encrypt = no\\n\
+cups options = \"raw media=a4\"\\n\
+cups server = ${CUPS_SERVER}:${CUPS_PORT}\
+    " "${FILE_SAMBACONF}"	
+	else
       sed -i "/\[global\]/a \
 load printers = no\\n\
 printing = bsd\\n\
@@ -407,6 +415,7 @@ ldap server require strong auth = no\
     } >> "${FILE_SUPERVISORDCONF}"
   fi
 
+  #NTP Settings
   if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
     touch /var/lib/ntp/ntp.drift
   fi
@@ -473,9 +482,7 @@ ldap server require strong auth = no\
 }
 
 appFirstStart () {
-  #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
-  net rpc rights grant "$UDOMAIN\Domain Admins" SeDiskOperatorPrivilege -U"$UDOMAIN\${DOMAINUSER,,}" "${DEBUG_OPTION}"
-  /usr/bin/supervisord -c "/etc/supervisor/supervisord.conf"
+ source /scripts/firstrun.sh
 }
 
 appStart () {
