@@ -19,7 +19,7 @@ COPY /ldif /ldif/
 COPY /etc /etc/
 COPY /scripts /scripts/
 
-RUN chmod +x /init.sh
+RUN chmod -R +x /scripts/
 
 # DNS
 EXPOSE 53/tcp
