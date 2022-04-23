@@ -18,6 +18,7 @@ RUN apt-get update \
 COPY /ldif /ldif/
 COPY /etc /etc/
 COPY /scripts /scripts/
+COPY /smb.conf.d/ /etc/samba/smb.conf.d/
 
 RUN chmod -R +x /scripts/
 

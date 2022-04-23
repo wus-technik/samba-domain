@@ -1,6 +1,6 @@
 #Group Add NFC2307
 
-dn: CN=Domain Users,CN=Users {{ LDAPDN }}
+dn: CN=Domain Users,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -11,7 +11,7 @@ msSFU30Name: Domain Users
 add: gidNumber
 gidNumber: {{ GID_DOM_USER }}
 
-dn: CN=Domain Admins,CN=Users {{ LDAPDN }}
+dn: CN=Domain Admins,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -22,7 +22,7 @@ msSFU30Name: Domain Admins
 add: gidNumber
 gidNumber: {{ GID_DOM_ADMIN }}
 
-dn: CN=Domain Computers,CN=Users {{ LDAPDN }}
+dn: CN=Domain Computers,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -33,7 +33,7 @@ msSFU30Name: Domain Computers
 add: gidNumber
 gidNumber: {{ GID_DOM_COMPUTERS }}
 
-dn: CN=Domain Controllers,CN=Users {{ LDAPDN }}
+dn: CN=Domain Controllers,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -44,7 +44,7 @@ msSFU30Name: Domain Controllers
 add: gidNumber
 gidNumber: {{ GID_DOM_DC }}
 
-dn: CN=Domain Guests,CN=Users {{ LDAPDN }}
+dn: CN=Domain Guests,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -55,7 +55,7 @@ msSFU30Name: Domain Guests
 add: gidNumber
 gidNumber: {{ GID_DOM_GUEST }}
 
-dn: CN=Schema Admins,CN=Users {{ LDAPDN }}
+dn: CN=Schema Admins,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -66,7 +66,7 @@ msSFU30Name: Schema Admins
 add: gidNumber
 gidNumber: {{ GID_SCHEMA }}
 
-dn: CN=Enterprise Admins,CN=Users {{ LDAPDN }}
+dn: CN=Enterprise Admins,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -77,7 +77,7 @@ msSFU30Name: Enterprise Admins
 add: gidNumber
 gidNumber: {{ GID_ENTERPRISE }}
 
-dn: CN=Group Policy Creator Owners,CN=Users {{ LDAPDN }}
+dn: CN=Group Policy Creator Owners,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -88,7 +88,7 @@ msSFU30Name: Group Policy Creator Owners
 add: gidNumber
 gidNumber: {{ GID_GPO }}
 
-dn: CN=Read-only Domain Controllers,CN=Users {{ LDAPDN }}
+dn: CN=Read-only Domain Controllers,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -99,7 +99,7 @@ msSFU30Name: Read-only Domain Controllers
 add: gidNumber
 gidNumber: {{ GID_RDOC }}
 
-dn: CN=DnsUpdateProxy,CN=Users {{ LDAPDN }}
+dn: CN=DnsUpdateProxy,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -110,7 +110,7 @@ msSFU30Name: DnsUpdateProxy
 add: gidNumber
 gidNumber: {{ GID_DNSUPDATE }}
 
-dn: CN=Enterprise Read-only Domain Controllers,CN=Users {{ LDAPDN }}
+dn: CN=Enterprise Read-only Domain Controllers,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -121,7 +121,7 @@ msSFU30Name: Enterprise Read-only Domain Controllers
 add: gidNumber
 gidNumber: {{ GID_ENTERPRISE_RDOC }}
 
-dn: CN=DnsAdmins,CN=Users {{ LDAPDN }}
+dn: CN=DnsAdmins,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -132,7 +132,7 @@ msSFU30Name: DnsAdmins
 add: gidNumber
 gidNumber: {{ GID_DNSADMIN }}
 
-dn: CN=Allowed RODC Password Replication Group,CN=Users {{ LDAPDN }}
+dn: CN=Allowed RODC Password Replication Group,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -143,7 +143,7 @@ msSFU30Name: Allowed RODC Password Replication Group
 add: gidNumber
 gidNumber: {{ GID_ALLOWED_RDOC }}
 
-dn: CN=Denied RODC Password Replication Group,CN=Users {{ LDAPDN }}
+dn: CN=Denied RODC Password Replication Group,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -154,7 +154,7 @@ msSFU30Name: Denied RODC Password Replication Group
 add: gidNumber
 gidNumber: {{ GID_DENIED_RDOC }}
 
-dn: CN=RAS and IAS Servers,CN=Users {{ LDAPDN }}
+dn: CN=RAS and IAS Servers,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -165,7 +165,7 @@ msSFU30Name: RAS and IAS Servers
 add: gidNumber
 gidNumber: {{ GID_RAS }}
 
-dn: CN=Cert Publishers,CN=Users {{ LDAPDN }}
+dn: CN=Cert Publishers,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -177,7 +177,7 @@ add: gidNumber
 gidNumber: {{ GID_CERT }}
 
 #Users Add NFC2307
-dn: CN=krbtgt,CN=Users {{ LDAPDN }}
+dn: CN=krbtgt,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -188,7 +188,7 @@ msSFU30Name: Cert Publishers
 add: uidNumber
 uidNumber: {{ UID_KRBTGT }}
 
-dn: CN=Guest,CN=Users {{ LDAPDN }}
+dn: CN=Guest,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -202,7 +202,7 @@ uidNumber: {{ UID_GUEST }}
 add: gidNumber
 gidNumber: {{ GID_DOM_GUEST }}
 
-dn: CN=Administrator,CN=Users {{ LDAPDN }}
+dn: CN=Administrator,CN=Users {{ LDAP_SUFFIX }}
 changetype: modify
 add: msSFU30NisDomain
 msSFU30NisDomain: {{ NETBIOS }}
@@ -216,7 +216,7 @@ uidNumber: {{ UID_ADMINISTRATOR }}
 add: gidNumber
 gidNumber: {{ GID_DOM_ADMIN }}
 
-dn: CN={{ NETBIOS }},CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System {{ LDAPDN }}
+dn: CN={{ NETBIOS }},CN=ypservers,CN=ypServ30,CN=RpcServices,CN=System {{ LDAP_SUFFIX }}
 changetype: modify
 replace: msSFU30Domains
 msSFU30Domains: {{ NETBIOS }}

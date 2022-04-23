@@ -4,10 +4,10 @@
 while (true)
 do
   echo "changing Kerberos Ticket Granting Ticket (TGT) password"
-  if python3 /scripts/chgkrbtgtpass-v4-15-stable.py | tee /tmp/chgkrbtgtpass.log; then
+  if python3 /"${DIR_SCRIPTS}"/chgkrbtgtpass-v4-15-stable.py | tee /tmp/chgkrbtgtpass.log; then
     echo "SUCCESS: Changed KRBTGT password"
 	# Change a second time
-	python3 /scripts/chgkrbtgtpass-v4-15-stable.py
+	python3 /"${DIR_SCRIPTS}"/chgkrbtgtpass-v4-15-stable.py
   else
     echo "ERROR: Failed chainging KRBTGT password" && exit 1
   fi
