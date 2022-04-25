@@ -2,14 +2,15 @@
 update-ca-certificates
 /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
 
-if [[ ${JOIN,,} = false ]];then
+if [ "${JOIN,,}" = false ];then
   # Better check if net rpc is rdy
   wait 180
   #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
-  net rpc rights grant "$UDOMAIN"\\"Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN"\\"${DOMAIN_USER,,}" ${DEBUG_OPTION}
+  net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
 else
-  if [ -f /var/lib/private/sambe/wins_config.ldb ] && [ ENABLE_WINS = true ];then
+  if [ -f /var/lib/private/sambe/wins_config.ldb ] && [ "${ENABLE_WINS}" = true ];then
   ldbadd -H wins_config.ldb /ldif/wins.ldif
+  fi
 fi
 # https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
 #Test Kerberos

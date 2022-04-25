@@ -67,35 +67,6 @@ config () {
   ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
   BIND_INTERFACES=${BIND_INTERFACES:-eth0} # Can be a list of interfaces seperated by spaces
 
-  #file variables
-  # DIR_SAMBA_CONF_DIR and DIR_SCRIPTS also need to be changed in the Dockerfile
-  DIR_SAMBA_CONF_DIR=/etc/samba/smb.conf.d/
-  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
-  DIR_SCRIPTS=/scripts
-
-  FILE_PKI_CA=$FILE_SAMBA_PRIVATE_BASE/tls/ca.pem
-  FILE_PKI_CERT=$FILE_SAMBA_PRIVATE_BASE/tls/cert.pem
-  FILE_PKI_CRL=$FILE_SAMBA_PRIVATE_BASE/tls/crl.pem
-  FILE_PKI_DH=$FILE_SAMBA_PRIVATE_BASE/tls/dh.key
-  FILE_PKI_INT=$FILE_SAMBA_PRIVATE_BASE/tls/intermediate.pem
-  FILE_PKI_KEY=$FILE_SAMBA_PRIVATE_BASE/tls/key.pem
-
-  FILE_SAMBA_CONF=/etc/samba/smb.conf
-  FILE_SAMBA_CONF_EXTERNAL=/etc/samba/external/smb.conf
-  FILE_SAMBA_INCLUDES=/etc/samba/includes.conf
-  FILE_SAMBA_PRIVATE_BASE=$DIR_SAMBA_DATA_PREFIX/private
-  FILE_SAMBA_USER_MAP=/etc/samba/user.map
-  FILE_SAMBA_SCHEMA_RFC=/ldif/RFC_Domain_User_Group.ldif
-  FILE_SAMBA_SCHEMA_LAPS1=/ldif/laps-1.ldif
-  FILE_SAMBA_SCHEMA_LAPS2=/ldif/laps-2.ldif
-  
-  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
-  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
-  FILE_OPENVPNCONF=/docker.ovpn
-  FILE_KRB5=/etc/krb5.conf
-  FILE_NSSWITCH=/etc/nsswitch.conf
-  FILE_SAMLDB=$FILE_SAMBA_PRIVATE_BASE/sam.ldb
-
   # Min Counter Values for NIS Attributes. Set in docker-compose if you want a different start
   # IT does nothing on DCs as they shall not use idmap settings.
   # Using the same Start and stop values on members however gets the RFC2307 attributs (NIS) rights
@@ -104,10 +75,45 @@ config () {
   IMAP_UID_START=${IMAP_UID_START:-$IMAP_ID_START}
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
+  #file variables
+  # DIR_SAMBA_CONF_DIR and DIR_SCRIPTS also need to be changed in the Dockerfile
+  DIR_SAMBA_DATA_PREFIX=/var/lib/samba
+  DIR_SAMBA_ETC=/etc/samba
+  DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
+  DIR_SAMBA_CONF_DIR=$DIR_SAMBA_ETC/smb.conf.d
+  DIR_SCRIPTS=/scripts
+  DIR_LDIF=/ldif
+  DIR_
+
+  FILE_PKI_CA=$DIR_SAMBA_PRIVATE/tls/ca.pem
+  FILE_PKI_CERT=$DIR_SAMBA_PRIVATE/tls/cert.pem
+  FILE_PKI_CRL=$DIR_SAMBA_PRIVATE/tls/crl.pem
+  FILE_PKI_DH=$DIR_SAMBA_PRIVATE/tls/dh.key
+  FILE_PKI_INT=$DIR_SAMBA_PRIVATE/tls/intermediate.pem
+  FILE_PKI_KEY=$DIR_SAMBA_PRIVATE/tls/key.pem
+
+  FILE_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf
+  FILE_SAMBA_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/smb.conf
+  FILE_SAMBA_INCLUDES=$DIR_SAMBA_ETC/includes.conf
+  
+  FILE_SAMBA_USER_MAP=$DIR_SAMBA_ETC/user.map
+  FILE_SAMBA_SCHEMA_RFC=$DIR_LDIF/RFC_Domain_User_Group.ldif
+  FILE_SAMBA_SCHEMA_LAPS1=$DIR_LDIF/laps-1.ldif
+  FILE_SAMBA_SCHEMA_LAPS2=$DIR_LDIF/laps-2.ldif
+  FILE_SAMBA_SCHEMA_WINSREPL=$DIR_LDIF/wins.ldif
+  
+  FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
+  FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
+  FILE_OPENVPNCONF=/docker.ovpn
+  FILE_KRB5=/etc/krb5.conf
+  FILE_NSSWITCH=/etc/nsswitch.conf
+  FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
+
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
   export LDAP_DN
 }
+
 appSetup () {
   # Get config parameters - moved for easier reading
   config
@@ -278,7 +284,7 @@ appSetup () {
           -e "s:{{ UID_ADMINISTRATOR }}:$UID_ADMINISTRATOR:g" \
           -e "s:{{ IMAP_UID_END }}:$IMAP_UID_END:g" \
           -e "s:{{ IMAP_GID_END }}:$IMAP_GID_END:g" \
-          "${$FILE_SAMBA_SCHEMA_RFC}.j2" > "${FILE_SAMBA_SCHEMA_RFC}"
+          "${FILE_SAMBA_SCHEMA_RFC}.j2" > "${FILE_SAMBA_SCHEMA_RFC}"
 
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}"
       fi
