@@ -2,6 +2,7 @@
 ![Githubg Workflow Image CI](https://img.shields.io/github/workflow/status/burnbabyburn/docker-ubuntu-samba-dc/Docker%20Image%20CI)
 * No OpenVPN testing
 * No second DC testing
+* Mount custom Samba [global] parameters to files in /etc/samba/smb.conf.d
 
 # Samba Active Directory Domain Controller for Docker
 
@@ -9,7 +10,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 
 ## Environment variables for quick start
 
-| ENVVAR                      | default value                                 | desciption  |
+| ENVVAR                      | default value                                 | description  |
 | --------------------------- | --------------------------------------------- | ------------- |
 | `DOMAIN`                    | SAMDOM.LOCAL                                  | Your Domain Name            |
 | `DOMAIN_USER`               | Administrator                                 | Best leave at default. unknown consequences  |

@@ -108,6 +108,7 @@ config () {
   FILE_KRB5=/etc/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
+  FILE_NTP=/etc/ntp.conf
 
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
@@ -330,10 +331,10 @@ appSetup () {
     if [[ ${ENABLE_CUPS,,} = true ]]; then
       sed -i "/\[global\]/a \
         \\\tload printers = yes\\n\
-        \\\tprinting = cups\\n\
-        \\\tcups encrypt = no\\n\
-        \\\tcups options = \"raw media=a4\"\\n\
-        \\\tcups server = ${CUPS_SERVER}:${CUPS_PORT}\
+        \\tprinting = cups\\n\
+        \\tcups encrypt = no\\n\
+        \\tcups options = \"raw media=a4\"\\n\
+        \\tcups server = ${CUPS_SERVER}:${CUPS_PORT}\
       " "${FILE_SAMBA_CONF}"	
 	  {
 	    echo ""
@@ -344,9 +345,9 @@ appSetup () {
 	else
       sed -i "/\[global\]/a \
         \\\tload printers = no\\n\
-        \\\tprinting = bsd\\n\
-        \\\tprintcap name = /dev/null\\n\
-        \\\tdisable spoolss = yes\
+        \\tprinting = bsd\\n\
+        \\tprintcap name = /dev/null\\n\
+        \\tdisable spoolss = yes\
       " "${FILE_SAMBA_CONF}"
     fi
 
@@ -354,7 +355,7 @@ appSetup () {
       # Prevent downgrade attacks to md5
       sed -i "/\[global\]/a \
         \\\treject md5 clients = yes\\n\
-        \\\treject md5 servers = yes\\n\
+        \\treject md5 servers = yes\\n\
       " "${FILE_SAMBA_CONF}"
     fi
 
@@ -367,10 +368,10 @@ appSetup () {
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
     sed -i "/\[global\]/a \
       \\\t#wins support = yes\\n\
-      \\\tpassword hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
-      \\\t# Template settings for login shell and home directory\\n\
-      \\\ttemplate shell = /bin/bash\\n\
-      \\\ttemplate homedir = /home/%U\
+      \\tpassword hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
+      \\t# Template settings for login shell and home directory\\n\
+      \\ttemplate shell = /bin/bash\\n\
+      \\ttemplate homedir = /home/%U\
     " "${FILE_SAMBA_CONF}"
 	
     # nsswitch anpassen
@@ -411,13 +412,13 @@ appSetup () {
     fi
     sed -i "/\[global\]/a \
       \\\ttls enabled  = yes\\n\
-      \\\ttls keyfile  = tls/key.pem\\n\
-      \\\ttls certfile = tls/cert.pem\\n\
-      \\\t#tls cafile   = tls/intermediate.pem\\n\
-      \\\ttls cafile   = tls/ca.pem\\n\
-      \\\ttls dh params file = tls/dh.key\\n\
-      \\\t#tls crlfile   = tls/crl.pem\\n\
-      \\\t#tls verify peer = ca_and_name\
+      \\ttls keyfile  = tls/key.pem\\n\
+      \\ttls certfile = tls/cert.pem\\n\
+      \\t#tls cafile   = tls/intermediate.pem\\n\
+      \\ttls cafile   = tls/ca.pem\\n\
+      \\ttls dh params file = tls/dh.key\\n\
+      \\t#tls crlfile   = tls/crl.pem\\n\
+      \\t#tls verify peer = ca_and_name\
     " "${FILE_SAMBA_CONF}"
   fi
 
@@ -437,7 +438,7 @@ appSetup () {
 
   sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" \
     -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" \
-    -i /etc/ntp.conf
+    -i "$FILE_NTP"
 
   # Own socket
   mkdir -p /var/lib/samba/ntp_signd/
@@ -454,25 +455,22 @@ appSetup () {
 #    chmod 0750 /var/lib/samba/winbindd_privileged
 #  fi
 
-#    if [[ ${ENABLE_LOGS,,} = true ]]; then
-#      sed -i "/\[global\]/a \
-#log file = /var/log/samba/%m.log\\n\
-#max log size = 10000\\n\
-#log level = 1\
-#      " /etc/samba/smb.conf
-#    else
-#      sed -i "/\[global\]/a \
-#log level = 0\\n\
-#      " /etc/samba/smb.conf
-#sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
-#    fi
+    if [[ ${ENABLE_LOGS,,} = true ]]; then
+      sed -i "/\[global\]/a \
+        \\\tlog file = /var/log/samba/%m.log\\n\
+        \\tmax log size = 10000\\n\
+        \\tlog level = ${DEBUG_LEVEL}\
+      " /etc/samba/smb.conf
+	  sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
+	  sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
+    fi
 
     #if [ "${ENABLE_BIND_INTERFACE,,}" = true ]; then
       #    sed -i "/\[global\]/a \
         #interfaces =${BIND_INTERFACES,,} lo\\n\
         #bind interfaces only = yes\
         #    " /etc/samba/smb.conf
-    #  printf >> "interface listen lo" /etc/ntp.conf
+    #  printf >> "interface listen lo" "$FILE_NTP"
     #  for INTERFACE in $BIND_INTERFACES
     #  do
     #    printf >> "interface listen $INTERFACE"
