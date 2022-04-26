@@ -62,7 +62,7 @@ config () {
   PKI_CN=${PKI_CN:-Simple Samba Root CA}
 
   ENABLE_DEBUG=${ENABLE_DEBUG:-true}
-  DEBUG_LEVEL=${DEBUG_LEVEL:0}
+  DEBUG_LEVEL=${DEBUG_LEVEL:-0}
 
   ENABLE_BIND_INTERFACE=${ENABLE_BIND_INTERFACE:-false}
   BIND_INTERFACES=${BIND_INTERFACES:-eth0} # Can be a list of interfaces seperated by spaces
@@ -83,7 +83,6 @@ config () {
   DIR_SAMBA_CONF_DIR=$DIR_SAMBA_ETC/smb.conf.d
   DIR_SCRIPTS=/scripts
   DIR_LDIF=/ldif
-  DIR_
 
   FILE_PKI_CA=$DIR_SAMBA_PRIVATE/tls/ca.pem
   FILE_PKI_CERT=$DIR_SAMBA_PRIVATE/tls/cert.pem
@@ -95,8 +94,8 @@ config () {
   FILE_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf
   FILE_SAMBA_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/smb.conf
   FILE_SAMBA_INCLUDES=$DIR_SAMBA_ETC/includes.conf
-  
   FILE_SAMBA_USER_MAP=$DIR_SAMBA_ETC/user.map
+
   FILE_SAMBA_SCHEMA_RFC=$DIR_LDIF/RFC_Domain_User_Group.ldif
   FILE_SAMBA_SCHEMA_LAPS1=$DIR_LDIF/laps-1.ldif
   FILE_SAMBA_SCHEMA_LAPS2=$DIR_LDIF/laps-2.ldif
@@ -112,7 +111,8 @@ config () {
 
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
-  export LDAP_DN
+  export LDAP_DN="$LDAP_DN"
+  export DIR_SCRIPTS="$DIR_SCRIPTS"
 }
 
 appSetup () {

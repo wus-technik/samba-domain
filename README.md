@@ -16,7 +16,7 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DOMAIN_USER`               | Administrator                                 | Best leave at default. unknown consequences  |
 | `DOMAIN_PASS`               | youshouldsetapassword                         | Domain Administrator Password  |
 | `DOMAIN_NETBIOS`            | SAMDOM                                        | WORKGROPUP/NETBIOS Domain Name usally first part of DOMAIN |
-| `HOSTIP`                    | NONE                                          | Set external Host IP  |
+| `HOSTIP`                    | NONE                                          | Set external Host IP if not running in network host mode. Can mess up DNS |
 | `HOSTNAME`                  | $(hostname)                                   | Hostname  |
 | `JOIN`                      | false                                         | Set to true if DC should join Domain  |
 | `JOIN_SITE`                 | Default-First-Site-Name                       | Sitename to join to  |
