@@ -217,14 +217,20 @@ appSetup () {
 
     else
       samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAIN_PASS}" --host-name="${HOSTNAME}" --server-role=dc --dns-backend=SAMBA_INTERNAL ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_DNS_FWD} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC}
-
+#
+#
+#
+#
+#
+# if hostip is set use external network ip to calc reverse zone
+#add reverse zone & add site & add ip network to site
+      #echo 411.311.211.111 | awk -F. '{print $4"."$3"." $2"."$1}'
       if [[ "$RECYCLEBIN" = true ]]; then
         # https://gitlab.com/samba-team/samba/-/blob/master/source4/scripting/bin/enablerecyclebin
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
       fi
 
       if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then
-	  {
         {
           echo ""
           echo "[program:ChangeKRBTGT]"
@@ -235,8 +241,8 @@ appSetup () {
           echo "redirect_stderr=true"
           echo "priority=99"
         } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
-      }
-
+      fi
+      
       if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
         mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
@@ -340,8 +346,8 @@ appSetup () {
       sed -i "/\[global\]/a \
         \\\tload printers = yes\\n\
         \\tprinting = cups\\n\
-		\\tprintcap name = cups\\n\
-		\\tshow add printer wizard = no\\n\
+	\\tprintcap name = cups\\n\
+	\\tshow add printer wizard = no\\n\
         \\tcups encrypt = no\\n\
         \\tcups options = \"raw media=a4\"\\n\
         \\t#cups server = ${CUPS_SERVER}:${CUPS_PORT}\
@@ -356,7 +362,7 @@ appSetup () {
 		echo "guest ok = Yes"
 		echo "browseable = No"
 	  } >> "${FILE_SAMBA_CONF}"
-	else
+    else
       sed -i "/\[global\]/a \
         \\\tload printers = no\\n\
         \\tprinting = bsd\\n\
