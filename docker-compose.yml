@@ -1,9 +1,14 @@
 version: '2'
 
 networks:
-  macvlan-samba:
-    external:
-      name: pihole_pihole_network
+  samba-net:
+    name: samba-net
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 172.101.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: br_samba
 
 services:
 
@@ -11,26 +16,43 @@ services:
 
   samba:
     build:.
-#    image: helge/samba-domain
-    container_name: samba-ad-dc
+    container_name: samba-dc01
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - './samba/tls:/var/lib/samba/private/tls'
-      - './samba/data:/var/lib/samba/'
-      - './samba/data:/var/lib/samba'
-      - './samba/log:/var/log/samba'
+      - './samba-dc01/tls:/var/lib/samba/private/tls'
+      - './samba-dc01/data:/var/lib/samba/'
+      - './samba-dc01/data:/var/lib/samba'
+      - './samba-dc01/log:/var/log/samba'
     environment:
-      - DOMAIN=AD.CHAOS
-      - DOMAINPASS=Pa!!word1
-      - DNSFORWARDER=192.168.1.6
-      - HOSTIP=192.168.1.45
-      - TLS=true
-      - LOGS=true
-      - NTPSERVERLIST=192.168.1.1
-      - IMAP_ID_START=10000
+      - TZ=Europe/Berlin
+      - DOMAIN=SAM.DOM
+      - DOMAIN_NETBIOS=WORKGROUP
+      - DOMAIN_PASS=Pa11w0rd!
+#      - HOSTIP=${HOST_IP}
+      - HOSTNAME=dc01
+      - JOIN=false
+      - JOIN_SITE=Site0
+      - NTPSERVERLIST=0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org
+      - RECYCLEBIN=true
+      - CHANGE_KRB_TGT_PW=true
+      - DISABLE_MD5=true
+      - DISABLE_PWCOMPLEXITY=true
+      - ENABLE_CUPS=false
+      - ENABLE_DNSFORWARDER=8.8.8.8
+      - ENABLE_DYNAMIC_PORTRANGE=49152-49170
+      - ENABLE_INSECURELDAP=true
+      - ENABLE_LAPS_SCHEMA=true
+      - ENABLE_LOGS=false
+      - ENABLE_MSCHAPV2=true
+      - ENABLE_RFC2307=true
+      - ENABLE_TLS=false
+      - ENABLE_DEBUG=true
+      - DEBUGLEVEL=1
+      - ENABLE_BIND_INTERFACE=false
+      - BIND_INTERFACES=eth1
     networks:
-      macvlan-samba:
-        ipv4_address: 192.168.1.45
+      samba-net:
+        ipv4_address: 172.101.1.100
     ports:
       - 53:53
       - 53:53/udp
@@ -46,25 +68,90 @@ services:
       - 464:464
       - 464:464/udp
       - 636:636
-      - 1024-1044:1024-1044
+#      - 1024-1044:1024-1044
       - 3268-3269:3268-3269
+      - 49152-49170:49152-49170
     dns_search:
-      - ad.chaos
+      - SAM.DOM
     dns:
-      - 192.168.1.45
-      - 192.168.1.6
-    extra_hosts:
-      - dc01 dc01.ad.chaos:192.168.1.45
-    hostname: dc01
-    domainname: ad.chaos
-    cap_add:
-      - NET_ADMIN
-      - SYS_NICE
-      - SYS_RESOURCE
-      - SYS_TIME
+      - 127.0.0.1
+#    extra_hosts:
+#      - dc01 dc01.ad.chaos:192.168.1.45
+    hostname: dockersamba01
+    domainname: SAM.DOM
+#    cap_add:
+#      - NET_ADMIN
+#      - SYS_NICE
+#      - SYS_RESOURCE
+#      - SYS_TIME
 #    devices:
 #      - /dev/net/tun
     privileged: true
-    restart: always
 
-# ----------- samba end ----------- #
+  samba-join:
+    build:.
+    container_name: samba-dc02
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - './samba-dc02/tls:/var/lib/samba/private/tls'
+      - './samba-dc02/data:/var/lib/samba/'
+      - './samba-dc02/data:/var/lib/samba'
+      - './samba-dc02/log:/var/log/samba'
+    environment:
+      - TZ=Europe/Berlin
+      - DOMAIN=SAM.DOM
+      - DOMAIN_NETBIOS=WORKGROUP
+      - DOMAIN_PASS=Pa11w0rd!
+#      - HOSTNAME=dc02
+      - JOIN=false
+      - JOIN_SITE=Site1
+      - JOIN
+      - NTPSERVERLIST=172.101.1.100
+      - DISABLE_MD5=true
+#      - ENABLE_CUPS=false
+      - ENABLE_DNSFORWARDER=172.101.1.100
+      - ENABLE_DYNAMIC_PORTRANGE=49152-49170
+      - ENABLE_INSECURELDAP=false
+      - ENABLE_LOGS=false
+      - ENABLE_MSCHAPV2=true
+      - ENABLE_TLS=false
+      - ENABLE_DEBUG=true
+      - DEBUGLEVEL=1
+      - ENABLE_BIND_INTERFACE=false
+      - BIND_INTERFACES=eth1
+    networks:
+      samba-net:
+        ipv4_address: 172.101.2.200
+#    ports:
+#      - 53:53
+#      - 53:53/udp
+#      - 88:88
+#      - 88:88/udp
+#      - 123:123
+#      - 135:135
+#      - 137-138:137-138/udp
+#      - 139:139
+#      - 389:389
+#      - 389:389/udp
+#      - 445:445
+#      - 464:464
+#      - 464:464/udp
+#      - 636:636
+#      - 3268-3269:3268-3269
+#      - 49152-49170:49152-49170
+    dns_search:
+      - SAM.DOM
+    dns:
+      - 127.0.0.1
+    extra_hosts:
+      - dc01 dc01.ad.chaos:192.168.1.45
+    hostname: dockersamba02
+    domainname: SAM.DOM
+#    cap_add:
+#      - NET_ADMIN
+#      - SYS_NICE
+#      - SYS_RESOURCE
+#      - SYS_TIME
+#    devices:
+#      - /dev/net/tun
+    privileged: true

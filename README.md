@@ -1,7 +1,6 @@
 # FORKED
 ![Githubg Workflow Image CI](https://img.shields.io/github/workflow/status/burnbabyburn/docker-ubuntu-samba-dc/Docker%20Image%20CI)
 * No OpenVPN testing
-* No second DC testing
 * Mount custom Samba [global] parameters to files in /etc/samba/smb.conf.d
 
 # Samba Active Directory Domain Controller for Docker
@@ -10,33 +9,34 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 
 ## Environment variables for quick start
 
-| ENVVAR                      | default value                                 | description  |
-| --------------------------- | --------------------------------------------- | ------------- |
-| `DOMAIN`                    | SAMDOM.LOCAL                                  | Your Domain Name            |
-| `DOMAIN_USER`               | Administrator                                 | Best leave at default. unknown consequences  |
-| `DOMAIN_PASS`               | youshouldsetapassword                         | Domain Administrator Password  |
-| `DOMAIN_NETBIOS`            | SAMDOM                                        | WORKGROPUP/NETBIOS Domain Name usally first part of DOMAIN |
-| `HOSTIP`                    | NONE                                          | Set external Host IP if not running in network host mode. Can mess up DNS |
-| `HOSTNAME`                  | $(hostname)                                   | Hostname  |
-| `JOIN`                      | false                                         | Set to true if DC should join Domain  |
-| `JOIN_SITE`                 | Default-First-Site-Name                       | Sitename to join to  |
-| `JOIN_SITE_VPN`             | false                                         | Use openvpn config before connection to DC is possible  |
-| `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org  | List of NTP Server  |
-| `RECYCLEBIN`                | true                                          | Enable AD optional feature RecylceBin|
-| `DISABLE_MD5`               | true                                          | Disable MD5 Clients and Server  |
-| `DISABLE_PW_COMPLEXITY`     | false                                         | Disable Password requirements  |
-| `ENABLE_CUPS`               | false                                         | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
-| `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          | If samba is behind a reverse proxy on some small systems the ports need to be limited  |
-| `ENABLE_INSECURE_LDAP`      | false                                         | Enable insecure ldap connections  |
-| `ENABLE_LAPS_SCHEMA`        | true                                          | Setup Local Administrator Password Solution  |
-| `ENABLE_LOGS`               | false                                         | Enable log files - disabled. log to stdout and ship docker logs |
-| `ENABLE_MSCHAPV2`           | false                                         | Enable MSCHAP authentication  |
-| `ENABLE_RFC2307`            | true                                          | Enable RDC2307 LDAP Extension in AD |
-| `ENABLE_TLS`                | false                                         | Enable TLS. Samba will autogen a cert if not provided before first start  |
-| `ENABLE_DEBUG`              | false                                         | Enables debug messages set DEBUG_LEVEL accordingly  |
-| `DEBUG_LEVEL`               | 0                                             | Level of debug messages |
-| `ENABLE_BIND_INTERFACE`     | false                                         | set to true to bind services to interfaces  |
-| `BIND_INTERFACES`           | eth0                                          | set interface name to bind services to  |
+| ENVVAR                      | default value                                 |dc only| description  |
+| --------------------------- | --------------------------------------------- |------------- | ------------- |
+| `DOMAIN`                    | SAMDOM.LOCAL                                  |       | Your Domain Name            |
+| `DOMAIN_USER`               | Administrator                                 |       | Best leave at default. unknown consequences  |
+| `DOMAIN_PASS`               | youshouldsetapassword                         |       | Domain Administrator Password  |
+| `DOMAIN_NETBIOS`            | SAMDOM                                        |       | WORKGROPUP/NETBIOS Domain Name usally first part of DOMAIN |
+| `HOSTIP`                    | NONE                                          |   X   | Set external Host IP if not running in network host mode. Use for splitdns. Samba will use HOSTIP and HOSTNAME to populate internal DNS |
+| `HOSTNAME`                  | $(hostname)                                   |       | Hostname of Samba. Overrides you containers hostname. Only works while proivisioning a domain ! Samba will use HOSTNAME and HOSTIP to populate internal DNS |
+| `JOIN`                      | false                                         |       | Set to true if DC should join Domain  |
+| `JOIN_SITE`                 | Default-First-Site-Name                       |       | Sitename to join to  |
+| `JOIN_SITE_VPN`             | false                                         |       | Use openvpn config before connection to DC is possible  |
+| `NTPSERVERLIST`             | 0.pool.ntp.org 1.pool...                      |       | List of NTP Server  |
+| `RECYCLEBIN`                | true                                          |   X   | Optional Feature: Enable AD RecylceBin|
+| `CHANGE_KRB_TGT_PW`         | true                                          |   X   | Optional Service: Only activate on PDC! Change password of krbtgt user (Kerberos Ticket Granting Ticket) to prevent Golden Ticket attacks |
+| `DISABLE_MD5`               | true                                          |       | Disable MD5 Clients and Server  |
+| `DISABLE_PW_COMPLEXITY`     | false                                         |   X   | Disable Password requirements  |
+| `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
+| `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | If samba is behind a reverse proxy on some small systems the ports need to be limited  |
+| `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
+| `ENABLE_LAPS_SCHEMA`        | true                                          |   X   | Setup Local Administrator Password Solution  |
+| `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
+| `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |
+| `ENABLE_RFC2307`            | true                                          |   X   | Enable RDC2307 LDAP Extension in AD |
+| `ENABLE_TLS`                | false                                         |       | Enable TLS. Samba will autogen a cert if not provided before first start  |
+| `ENABLE_DEBUG`              | false                                         |       | Enables debug messages set DEBUG_LEVEL accordingly  |
+| `DEBUG_LEVEL`               | 0                                             |       | Level of debug messages |
+| `ENABLE_BIND_INTERFACE`     | false                                         |       | set to true to bind services to interfaces  |
+| `BIND_INTERFACES`           | eth0                                          |       | set interface name to bind services to  |
 
 ## Add Reverse DNS Zone
 docker exec -it samba-ad-dc "samba-tool dns zonecreate <Your-AD-DNS-Server-IP-or-hostname> <NETADDR>.in-addr.arpa -U<URDOMAIN>\administrator --password=<DOMAINPASS>"

@@ -42,6 +42,7 @@ config () {
   JOIN_SITE_VPN=${JOIN_SITE_VPN:-false}
   NTPSERVERLIST=${NTPSERVERLIST:-0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org}
   RECYCLEBIN=${RECYCLEBIN:-true}
+  CHANGE_KRB_TGT_PW=${CHANGE_KRB_TGT_PW:-false}
 
   DISABLE_MD5=${DISABLE_MD5:-true}
   DISABLE_PW_COMPLEXITY=${DISABLE_PW_COMPLEXITY:-false}
@@ -112,6 +113,7 @@ config () {
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
   export LDAP_DN="$LDAP_DN"
+  export LDAP_SUFFIX="$LDAP_SUFFIX"
   export DIR_SCRIPTS="$DIR_SCRIPTS"
 }
 
@@ -194,17 +196,17 @@ appSetup () {
       do
         samba-tool domain join "${LDOMAIN}" DC -U"${DOMAIN_NETBIOS}"\\"${DOMAIN_USER}" ${OPTION_RFC} --password="${DOMAIN_PASS}" "${OPTION_JOIN}" '--dns-backend=SAMBA_INTERNAL' ${SAMBA_DEBUG_OPTION} ${OPTION_INT} ${OPTION_BIND} ${OPTION_DNS_FWD} ${OPTION_RPC} && s=0 && break || s=$? && sleep 60
       done; (exit $s)
-      # Netlogon & sysvol readonly on secondary DC
-      {
-        echo " "
-        echo "[netlogon]"
-        echo "path = /var/lib/samba/sysvol/test.dom/scripts"
-        echo "read only = Yes"
-        echo " "
-        echo "[sysvol]"
-        echo "path = /var/lib/samba/sysvol"
-        echo "read only = Yes"
-      } >> "${FILE_SAMBA_CONF}"
+#      # Netlogon & sysvol readonly on secondary DC
+#      {
+#        echo " "
+#        echo "[netlogon]"
+#        echo "path = /var/lib/samba/sysvol/test.dom/scripts"
+#        echo "read only = Yes"
+#        echo " "
+#        echo "[sysvol]"
+#        echo "path = /var/lib/samba/sysvol"
+#        echo "read only = Yes"
+#      } >> "${FILE_SAMBA_CONF}"
 
       #Check if Join was successfull
       if host -t A "$HOSTNAME"."$LDOMAIN".;then
@@ -212,6 +214,7 @@ appSetup () {
       else
         echo "no DNS host record found. Pls see https://wiki.samba.org/index.php/Verifying_and_Creating_a_DC_DNS_Record#Verifying_and_Creating_the_objectGUID_Record"
       fi
+
     else
       samba-tool domain provision --domain="${DOMAIN_NETBIOS}" --realm="${UDOMAIN}" "${OPTION_JOIN}" --adminpass="${DOMAIN_PASS}" --host-name="${HOSTNAME}" --server-role=dc --dns-backend=SAMBA_INTERNAL ${OPTION_INT} ${OPTION_BIND} ${OPTION_HOSTIP} ${OPTION_DNS_FWD} ${OPTION_RFC} ${SAMBA_DEBUG_OPTION} ${OPTION_RPC}
 
@@ -220,21 +223,25 @@ appSetup () {
         python3 /scripts/enablerecyclebin.py "${FILE_SAMLDB}"
       fi
 
-      {
-        echo ""
-        echo "[program:ChangeKRBTGT]"
-        echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
-        echo "stdout_logfile=/dev/fd/1"
-        echo "stdout_logfile_maxbytes=0"
-        echo "stdout_logfile_backups=0"
-        echo "redirect_stderr=true"
-        echo "priority=99"
-      } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
+      if [[ "$CHANGE_KRB_TGT_PW" = true ]]; then
+	  {
+        {
+          echo ""
+          echo "[program:ChangeKRBTGT]"
+          echo "command=/bin/sh /scripts/chgkrbtgtpass.sh"
+          echo "stdout_logfile=/dev/fd/1"
+          echo "stdout_logfile_maxbytes=0"
+          echo "stdout_logfile_backups=0"
+          echo "redirect_stderr=true"
+          echo "priority=99"
+        } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
+      }
 
       if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
         mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
       fi
+
       # Set default uid and gid for ad user and groups, based on IMAP_GID_START value
       if [[ ${DISABLE_PW_COMPLEXITY,,} = true ]]; then
         GID_DOM_USER=$((IMAP_GID_START))
@@ -289,6 +296,7 @@ appSetup () {
 
         ldbmodify -H "${FILE_SAMLDB}" "${FILE_SAMBA_SCHEMA_RFC}" -U "${DOMAIN_USER}"
       fi
+
       #Microsoft Local Administrator Password Solution (LAPS)
       if [[ ${DISABLE_PW_COMPLEXITY,,} = true ]]; then
         sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
@@ -332,15 +340,21 @@ appSetup () {
       sed -i "/\[global\]/a \
         \\\tload printers = yes\\n\
         \\tprinting = cups\\n\
+		\\tprintcap name = cups\\n\
+		\\tshow add printer wizard = no\\n\
         \\tcups encrypt = no\\n\
         \\tcups options = \"raw media=a4\"\\n\
-        \\tcups server = ${CUPS_SERVER}:${CUPS_PORT}\
+        \\t#cups server = ${CUPS_SERVER}:${CUPS_PORT}\
       " "${FILE_SAMBA_CONF}"	
 	  {
 	    echo ""
 		echo "[printers]"
-        echo "path = /var/tmp/"
+		echo "comment = All Printers"
+        echo "path = /var/spool/samba"
         echo "printable = yes"
+		echo "use client driver = Yes"
+		echo "guest ok = Yes"
+		echo "browseable = No"
 	  } >> "${FILE_SAMBA_CONF}"
 	else
       sed -i "/\[global\]/a \
@@ -373,7 +387,7 @@ appSetup () {
       \\ttemplate shell = /bin/bash\\n\
       \\ttemplate homedir = /home/%U\
     " "${FILE_SAMBA_CONF}"
-	
+
     # nsswitch anpassen
     sed -i "s,passwd:.*,passwd:         files winbind,g" "$FILE_NSSWITCH"
     sed -i "s,group:.*,group:          files winbind,g" "$FILE_NSSWITCH"
@@ -485,29 +499,30 @@ appFirstStart () {
 
 appStart () {
   update-ca-certificates
+  loadconfdir
+  config
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
 }
 
 #https://gist.github.com/meetnick/fb5587d25d4174d7adbc8a1ded642d3c
 loadconfdir () {
 # adds includes.conf file existance to smb.conf file
-if ! grep -q 'include = '"${SMB_INCLUDES}" "${FILE_SAMBA_CONF}" ; then
-      sed -i "/\[global\]/a \
-        \\\tinclude = ${SMB_INCLUDES}\
-      " "${FILE_SAMBA_CONF}"
-fi
+  if ! grep -q 'include = '"${SMB_INCLUDES}" "${FILE_SAMBA_CONF}" ; then
+    sed -i "/\[global\]/a \
+      \\\tinclude = ${SMB_INCLUDES}\
+    " "${FILE_SAMBA_CONF}"
+  fi
 
-# create directory smb.conf.d to store samba .conf files
-mkdir -p "$SMB_CONF_DIR"
+  # create directory smb.conf.d to store samba .conf files
+  mkdir -p "$SMB_CONF_DIR"
 
-# populates includes.conf with files in smb.conf.d directory
-find "${DIR_SAMBA_CONF_DIR}" -maxdepth 1 | sed -e 's/^/include = /' > "$SMB_INCLUDES"
+  # populates includes.conf with files in smb.conf.d directory
+  find "${DIR_SAMBA_CONF_DIR}" -maxdepth 1 | sed -e 's/^/include = /' > "$SMB_INCLUDES"
 }
 
 # If the supervisor conf isn't there, we're spinning up a new container
 if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
   cp "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-  loadconfdir
   appStart
 else
   appSetup
