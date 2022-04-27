@@ -184,9 +184,9 @@ appSetup () {
   fi
 
   # If the finished file (external/smb.conf) doesn't exist, this is new container with empty volume, we're not just moving to a new container
-  if [[ ! -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
-    if [[ -f "${FILE_SAMBA_CONF}" ]]; then
-      mv "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF}".orig
+  if [[ ! -f /etc/samba/external/smb.conf ]]; then
+    if [[ -f /etc/samba/smb.conf ]]; then
+      mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
     fi
     # Optional params encased with "" will break the command
     if [[ ${JOIN,,} = true ]]; then
