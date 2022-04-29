@@ -15,7 +15,7 @@ services:
 # ----------- samba begin ----------- #
 
   samba:
-    build:.
+    build: .
     container_name: samba-dc01
     volumes:
       - /etc/localtime:/etc/localtime:ro

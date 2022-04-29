@@ -4,7 +4,7 @@ update-ca-certificates
 
 if [ "${JOIN,,}" = false ];then
   # Better check if net rpc is rdy
-  wait 180
+  sleep 300s
   #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
   net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
 else

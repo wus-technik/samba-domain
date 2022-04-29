@@ -77,11 +77,11 @@ config () {
   IMAP_GID_START=${IMAP_GID_START:-$IMAP_ID_START}
 
   #file variables
-  # DIR_SAMBA_CONF_DIR and DIR_SCRIPTS also need to be changed in the Dockerfile
+  # DIR_SAMBA_CONF and DIR_SCRIPTS also need to be changed in the Dockerfile
   DIR_SAMBA_DATA_PREFIX=/var/lib/samba
   DIR_SAMBA_ETC=/etc/samba
   DIR_SAMBA_PRIVATE=$DIR_SAMBA_DATA_PREFIX/private
-  DIR_SAMBA_CONF_DIR=$DIR_SAMBA_ETC/smb.conf.d
+  DIR_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf.d
   DIR_SCRIPTS=/scripts
   DIR_LDIF=/ldif
 
@@ -513,17 +513,17 @@ appStart () {
 #https://gist.github.com/meetnick/fb5587d25d4174d7adbc8a1ded642d3c
 loadconfdir () {
 # adds includes.conf file existance to smb.conf file
-  if ! grep -q 'include = '"${SMB_INCLUDES}" "${FILE_SAMBA_CONF}" ; then
+  if ! grep -q 'include = '"${FILE_SAMBA_INCLUDES}" "${FILE_SAMBA_CONF}" ; then
     sed -i "/\[global\]/a \
-      \\\tinclude = ${SMB_INCLUDES}\
+      \\\tinclude = ${FILE_SAMBA_INCLUDES}\
     " "${FILE_SAMBA_CONF}"
   fi
 
   # create directory smb.conf.d to store samba .conf files
-  mkdir -p "$SMB_CONF_DIR"
+  mkdir -p "$DIR_SAMBA_CONF"
 
   # populates includes.conf with files in smb.conf.d directory
-  find "${DIR_SAMBA_CONF_DIR}" -maxdepth 1 | sed -e 's/^/include = /' > "$SMB_INCLUDES"
+  find "${DIR_SAMBA_CONF}" -maxdepth 1 | sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
 
 # If the supervisor conf isn't there, we're spinning up a new container
