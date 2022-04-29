@@ -7,7 +7,7 @@ do
   ALLDC=$(ldbsearch -H /var/lib/samba/private/sam.ldb '(&(objectCategory=Computer)(userAccountControl:1.2.840.113556.1.4.803:=8192))' | grep dn: | sed 's/dn: /\n/g' | sed '/^[[:space:]]*$/d')
   IFS=$'\n'
   for dc in ${ALLDC}; do
-    if [[ ! "$HOSTNAME" == "$dc" ]];then
+    if [ ! "$HOSTNAME" = "$dc" ]; then
 	  samba-tool drs replicate "$dc" "$HOSTNAME" "$LDAP_SUFFIX"
       samba-tool drs replicate "$dc" "$HOSTNAME" "DC=ForestDnsZones$LDAP_SUFFIX"
       samba-tool drs replicate "$dc" "$HOSTNAME" "CN=Configuration$LDAP_SUFFIX"
