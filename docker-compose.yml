@@ -140,6 +140,7 @@ services:
       - SAM.DOM
     dns:
       - 127.0.0.1
+      - 172.101.1.100
 #    extra_hosts:
 #      - dc01 dc01.ad.chaos:192.168.1.45
     hostname: dockersamba02
