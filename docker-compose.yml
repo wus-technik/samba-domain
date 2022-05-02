@@ -20,7 +20,6 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - './samba-dc01/tls:/var/lib/samba/private/tls'
-      - './samba-dc01/data:/var/lib/samba/'
       - './samba-dc01/data:/var/lib/samba'
       - './samba-dc01/log:/var/log/samba'
     environment:
@@ -94,7 +93,6 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - './samba-dc02/tls:/var/lib/samba/private/tls'
-      - './samba-dc02/data:/var/lib/samba/'
       - './samba-dc02/data:/var/lib/samba'
       - './samba-dc02/log:/var/log/samba'
     environment:
