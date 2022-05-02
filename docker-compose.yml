@@ -1,4 +1,4 @@
-version: '2'
+version: '3.7'
 
 networks:
   samba-net:
@@ -20,7 +20,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - './samba-dc01/tls:/var/lib/samba/private/tls'
-      - './samba-dc01/data:/var/lib/samba'
+      - './samba-dc01/data:/var/lib/samba/'
       - './samba-dc01/log:/var/log/samba'
     environment:
       - TZ=Europe/Berlin
@@ -30,7 +30,7 @@ services:
 #      - HOSTIP=${HOST_IP}
       - HOSTNAME=dc01
       - JOIN=false
-      - JOIN_SITE=Site0
+#      - JOIN_SITE=Site0
       - NTPSERVERLIST=0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org
       - RECYCLEBIN=true
       - CHANGE_KRB_TGT_PW=true
@@ -41,7 +41,7 @@ services:
       - ENABLE_DYNAMIC_PORTRANGE=49152-49170
       - ENABLE_INSECURELDAP=true
       - ENABLE_LAPS_SCHEMA=true
-      - ENABLE_LOGS=false
+      - ENABLE_LOGS=true
       - ENABLE_MSCHAPV2=true
       - ENABLE_RFC2307=true
       - ENABLE_TLS=false
@@ -88,12 +88,12 @@ services:
     privileged: true
 
   samba-join:
-    build:.
+    build: .
     container_name: samba-dc02
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - './samba-dc02/tls:/var/lib/samba/private/tls'
-      - './samba-dc02/data:/var/lib/samba'
+      - './samba-dc02/data:/var/lib/samba/'
       - './samba-dc02/log:/var/log/samba'
     environment:
       - TZ=Europe/Berlin
@@ -102,8 +102,7 @@ services:
       - DOMAIN_PASS=Pa11w0rd!
 #      - HOSTNAME=dc02
       - JOIN=false
-      - JOIN_SITE=Site1
-      - JOIN
+#      - JOIN_SITE=Site1
       - NTPSERVERLIST=172.101.1.100
       - DISABLE_MD5=true
 #      - ENABLE_CUPS=false
