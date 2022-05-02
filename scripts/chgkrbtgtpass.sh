@@ -1,6 +1,8 @@
 #!/bin/bash
 #See: https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_reset_krbtgt.html
 
+set -x
+
 while true
 do
  sleep 10m
@@ -34,8 +36,7 @@ do
   echo "$date1"
   echo "$lastset"
   
-  # Space as quick fix
-  if [ " $date1" = "$date2" ]; then
+  if [ "$date1" = "$date2" ]; then
     echo "Verify OK"
   else
     echo "Verify FAILED"

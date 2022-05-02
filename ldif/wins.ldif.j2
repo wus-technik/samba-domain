@@ -1,4 +1,4 @@
 # run on dc01 and vice versa on all DCs who should replicate WINS
-dn: CN=dc02,CN=PARTNERS
+dn: CN={{DC_DNS}},CN=PARTNERS
 objectClass: wreplPartner
-address: 192.168.1.20
+address: {{DC_IP}}

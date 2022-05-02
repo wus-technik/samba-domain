@@ -55,6 +55,7 @@ config () {
   ENABLE_LOGS=${ENABLE_LOGS:-false}
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
+  ENABLE_WINS=${ENABLE_WINS:-true}
 
   ENABLE_TLS=${ENABLE_TLS:-false}
   TLS_PKI=${TLS_PKI:-false}
@@ -91,6 +92,8 @@ config () {
   FILE_PKI_DH=$DIR_SAMBA_PRIVATE/tls/dh.key
   FILE_PKI_INT=$DIR_SAMBA_PRIVATE/tls/intermediate.pem
   FILE_PKI_KEY=$DIR_SAMBA_PRIVATE/tls/key.pem
+  
+  FILE_SAMBA_WINSLDB=$DIR_SAMBA_PRIVATE/wins_config.ldb
 
   FILE_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf
   FILE_SAMBA_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/smb.conf
@@ -385,10 +388,14 @@ appSetup () {
       " "${FILE_SAMBA_CONF}"
     fi
 
+    if [[ ${ENABLE_WINS,,} = true ]]; then
+      sed -i "/\[global\]/a \
+        \\\twins support = yes\\n\
+      " "${FILE_SAMBA_CONF}"
+    fi
     # https://samba.tranquil.it/doc/en/samba_advanced_methods/samba_active_directory_higher_security_tips.html#generating-additional-password-hashes
     sed -i "/\[global\]/a \
-      \\\t#wins support = yes\\n\
-      \\tpassword hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
+      \\\tpassword hash userPassword schemes = CryptSHA256 CryptSHA512\\n\
       \\t# Template settings for login shell and home directory\\n\
       \\ttemplate shell = /bin/bash\\n\
       \\ttemplate homedir = /home/%U\
@@ -500,7 +507,34 @@ appSetup () {
 }
 
 appFirstStart () {
- source /scripts/firstrun.sh
+  update-ca-certificates
+  /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
+
+  if [ "${JOIN,,}" = false ];then
+    # Better check if net rpc is rdy
+    sleep 300s
+    #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
+    net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
+  else
+    if [ -f "$FILE_SAMBA_WINSLDB" ] && [ "${ENABLE_WINS}" = true ];then
+      sed -e "s: {{DC_IP}}:$LDAP_SUFFIX:g" \
+	      -e "s: {{DC_DNS}}:$LDAP_SUFFIX:g" \
+          "${FILE_SAMBA_SCHEMA_WINSREPL}.j2" > "${FILE_SAMBA_SCHEMA_WINSREPL}"
+    ldbadd -H "$FILE_SAMBA_WINSLDB" "$FILE_SAMBA_SCHEMA_WINSREPL"
+    fi
+  fi
+  # https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller
+  #Test Kerberos
+  if echo "${DOMAIN_PASS}" | kinit "${DOMAIN_USER}";then
+    echo " kinit successfull"
+    klist
+  fi
+  # Verify Samba Fileserver is working
+  smbclient -L localhost -N
+  # Test Samba Auth
+  smbclient //localhost/netlogon -U"${DOMAIN_USER}" -c 'ls' --password "${DOMAIN_PASS}"
+  wait
+  # source /scripts/firstrun.sh
 }
 
 appStart () {
