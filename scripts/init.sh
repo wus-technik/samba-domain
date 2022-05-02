@@ -307,7 +307,7 @@ appSetup () {
       fi
 
       #Microsoft Local Administrator Password Solution (LAPS)
-      if [[ ${DISABLE_PW_COMPLEXITY,,} = true ]]; then
+      if [[ ${ENABLE_LAPS_SCHEMA,,} = true ]]; then
         sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
           "${FILE_SAMBA_SCHEMA_LAPS1}.j2" > "${FILE_SAMBA_SCHEMA_LAPS1}"
         sed -e "s: {{ LDAP_SUFFIX }}:$LDAP_SUFFIX:g" \
@@ -430,7 +430,7 @@ appSetup () {
     } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
   fi
 
-   if [ "${ENABLE_TLS,,}" = true ]; then
+  if [ "${ENABLE_TLS,,}" = true ]; then
     if [ ! -f tls/key.pem ] && [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
       print "No custom CA found. Samba will autogenerate one"
     fi
@@ -453,25 +453,26 @@ appSetup () {
   if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
     touch /var/lib/ntp/ntp.drift
   fi
+  if grep "{{ NTPSERVER }}" etc/ntp.conf; then
+    DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
+    NTPSERVER=""
+    NTPSERVERRESTRICT=""
+    for DC in $DCs
+    do
+      NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
+      NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
+    done
 
-  DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
-  NTPSERVER=""
-  NTPSERVERRESTRICT=""
-  for DC in $DCs
-  do
-    NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
-    NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
-  done
-
-  sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" \
-    -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" \
-    -i "$FILE_NTP"
-
-  # Own socket
-  mkdir -p /var/lib/samba/ntp_signd/
-  chown root:ntp /var/lib/samba/ntp_signd/
-  chmod 750 /var/lib/samba/ntp_signd/
-
+    sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" \
+      -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" \
+      -i "$FILE_NTP"
+  fi
+  if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
+    # Own socket
+    mkdir -p /var/lib/samba/ntp_signd/
+    chown root:ntp /var/lib/samba/ntp_signd/
+    chmod 750 /var/lib/samba/ntp_signd/
+  fi
 # Not needed on Samba 4.15 with ubuntu:devel
 #  if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
 #    mkdir /var/lib/samba/winbindd_privileged/
@@ -482,15 +483,15 @@ appSetup () {
 #    chmod 0750 /var/lib/samba/winbindd_privileged
 #  fi
 
-    if [[ ${ENABLE_LOGS,,} = true ]]; then
-      sed -i "/\[global\]/a \
-        \\\tlog file = /var/log/samba/%m.log\\n\
-        \\tmax log size = 10000\\n\
-        \\tlog level = ${DEBUG_LEVEL}\
-      " /etc/samba/smb.conf
-	  sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
-	  sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
-    fi
+  if [[ ${ENABLE_LOGS,,} = true ]]; then
+    sed -i "/\[global\]/a \
+      \\\tlog file = /var/log/samba/%m.log\\n\
+      \\tmax log size = 10000\\n\
+      \\tlog level = ${DEBUG_LEVEL}\
+    " /etc/samba/smb.conf
+	sed -i '/FILE:/s/^#//g' "$FILE_KRB5"
+	sed -i '/FILE:/s/^#_//g' "$FILE_NTP"
+  fi
 
     #if [ "${ENABLE_BIND_INTERFACE,,}" = true ]; then
       #    sed -i "/\[global\]/a \
