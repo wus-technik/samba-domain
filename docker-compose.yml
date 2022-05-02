@@ -101,7 +101,7 @@ services:
       - DOMAIN_NETBIOS=WORKGROUP
       - DOMAIN_PASS=Pa11w0rd!
 #      - HOSTNAME=dc02
-      - JOIN=false
+      - JOIN=true
 #      - JOIN_SITE=Site1
       - NTPSERVERLIST=172.101.1.100
       - DISABLE_MD5=true
