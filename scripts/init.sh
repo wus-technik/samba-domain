@@ -8,7 +8,7 @@ config() {
   LDOMAIN=${DOMAIN,,} #alllowercase
   UDOMAIN=${DOMAIN^^} #ALLUPPERCASE
   URDOMAIN=${UDOMAIN%%.*} #trim
-  
+
   DOMAIN_USER=${DOMAIN_USER:-Administrator}
   DOMAIN_PASS=${DOMAIN_PASS:-youshouldsetapassword}
   DOMAIN_NETBIOS=${DOMAIN_NETBIOS:-$URDOMAIN}
@@ -87,7 +87,7 @@ config() {
   FILE_PKI_DH=$DIR_SAMBA_PRIVATE/tls/dh.key
   FILE_PKI_INT=$DIR_SAMBA_PRIVATE/tls/intermediate.pem
   FILE_PKI_KEY=$DIR_SAMBA_PRIVATE/tls/key.pem
-  
+
   FILE_SAMBA_WINSLDB=$DIR_SAMBA_PRIVATE/wins_config.ldb
 
   FILE_SAMBA_CONF=$DIR_SAMBA_ETC/smb.conf
@@ -264,7 +264,7 @@ appSetup () {
           echo "priority=99"
         } >> "${FILE_SUPERVISORD_CUSTOM_CONF}"
       fi
-      
+
       if [[ ! -d /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/ ]]; then
         mkdir -p /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/en-US
         mkdir /var/lib/samba/sysvol/"$LDOMAIN"/Policies/PolicyDefinitions/de-DE
@@ -451,7 +451,7 @@ appSetup () {
 
   if [ "${ENABLE_TLS,,}" = true ]; then
     if [ ! -f tls/key.pem ] && [ ! -f tls/key.pem ] && [ ! -f tls/cert.pem ]; then
-      print "No custom CA found. Samba will autogenerate one"
+      echo "No custom CA found. Samba will autogenerate one"
     fi
     if [ ! -f /var/lib/samba/private/tls/dh.key ]; then
       openssl dhparam -out /var/lib/samba/private/tls/dh.key 2048
@@ -503,6 +503,7 @@ appSetup () {
 }
 
 appFirstStart () {
+  loadconfdir
   update-ca-certificates
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}" &
 
