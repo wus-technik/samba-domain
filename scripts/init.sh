@@ -133,6 +133,7 @@ appSetup () {
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""
     NTPSERVERRESTRICT=""
+	IFS=$'\n'
     for DC in $DCs
     do
       NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
@@ -141,7 +142,7 @@ appSetup () {
 
     sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
     sed -i "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" "$FILE_NTP"
-
+    IFS=''
   fi
   if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
     # Own socket
