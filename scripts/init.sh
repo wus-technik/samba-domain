@@ -450,9 +450,9 @@ appSetup () {
   fi
 
   #NTP Settings
-  if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
-    touch /var/lib/ntp/ntp.drift
-  fi
+#  if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
+#    touch /var/lib/ntp/ntp.drift
+#  fi
   if grep "{{ NTPSERVER }}" etc/ntp.conf; then
     DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
     NTPSERVER=""

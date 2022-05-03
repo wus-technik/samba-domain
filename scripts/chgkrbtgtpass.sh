@@ -5,19 +5,21 @@ set -x
 
 while true
 do
- sleep 10m
-  ALLDC=$(ldbsearch -H /var/lib/samba/private/sam.ldb '(&(objectCategory=Computer)(userAccountControl:1.2.840.113556.1.4.803:=8192))' | grep dn: | sed 's/dn: /\n/g' | sed '/^[[:space:]]*$/d')
-  IFS=$'\n'
-  for dc in ${ALLDC}; do
-    if [ ! "$HOSTNAME" = "$dc" ]; then
-	  samba-tool drs replicate "$dc" "$HOSTNAME" "$LDAP_SUFFIX"
-      samba-tool drs replicate "$dc" "$HOSTNAME" "DC=ForestDnsZones$LDAP_SUFFIX"
-      samba-tool drs replicate "$dc" "$HOSTNAME" "CN=Configuration$LDAP_SUFFIX"
-      samba-tool drs replicate "$dc" "$HOSTNAME" "DC=DomainDnsZones$LDAP_SUFFIX"
-      samba-tool drs replicate "$dc" "$HOSTNAME" "CN=Schema,CN=Configuration$LDAP_SUFFIX"
-	fi
-  done
-  IFS=''
+#TESTING BEGIN - get all dcs to replicate to
+# sleep 10m
+#  ALLDC=$(ldbsearch -H /var/lib/samba/private/sam.ldb '(&(objectCategory=Computer)(userAccountControl:1.2.840.113556.1.4.803:=8192))' | grep dn: | sed 's/dn: /\n/g' | sed '/^[[:space:]]*$/d')
+#  IFS=$'\n'
+#  for dc in ${ALLDC}; do
+#    if [ ! "$HOSTNAME" = "$dc" ]; then
+#	  samba-tool drs replicate "$dc" "$HOSTNAME" "$LDAP_SUFFIX"
+#      samba-tool drs replicate "$dc" "$HOSTNAME" "DC=ForestDnsZones$LDAP_SUFFIX"
+#      samba-tool drs replicate "$dc" "$HOSTNAME" "CN=Configuration$LDAP_SUFFIX"
+#      samba-tool drs replicate "$dc" "$HOSTNAME" "DC=DomainDnsZones$LDAP_SUFFIX"
+#      samba-tool drs replicate "$dc" "$HOSTNAME" "CN=Schema,CN=Configuration$LDAP_SUFFIX"
+#	fi
+#  done
+#  IFS=''
+#TESTING END
   echo "changing Kerberos Ticket Granting Ticket (TGT) password"
   if python3 /"${DIR_SCRIPTS}"/chgkrbtgtpass-v4-15-stable.py | tee /var/log/chgkrbtgtpass.log; then
     echo "SUCCESS: Changed KRBTGT password"
