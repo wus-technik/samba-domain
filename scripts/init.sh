@@ -124,9 +124,9 @@ appSetup () {
   # Get config parameters - moved for easier reading
   config
   
-  #NTP Settings
+  #NTP Settings - Instead of just touch the file write a float to the file to get rid of "format error frequency file /var/lib/ntp/ntp.drift" error message
   if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
-    touch /var/lib/ntp/ntp.drift
+    echo 0.0 > /etc/ntp/drift
 	chown ntp:ntp /var/lib/ntp/ntp.drift
   fi
   if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
@@ -139,8 +139,8 @@ appSetup () {
       NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
     done
 
-    sed -i -e "s:{{ NTPSERVER }}:$NTPSERVER::" "$FILE_NTP"
-    sed -i -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" "$FILE_NTP"
+    sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
+    sed -i "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" "$FILE_NTP"
 
   fi
   if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
