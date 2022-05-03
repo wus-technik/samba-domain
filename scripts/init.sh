@@ -2,25 +2,6 @@
 
 set -x
 
-#Todo:
-# ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
-# SYSVOL replication:
-# Add the following line to allow a subnet to receive time service and query server statistics:  https://support.ntp.org/bin/view/Support/AccessRestrictions#Section_6.5.1.1.3.
-# time sync as client (beim join)
-
-######### BEGIN MAIN function #########
-config
-# If the supervisor conf isn't there, we're spinning up a new container
-if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
-  cp "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-  appStart
-else
-  appSetup
-fi
-
-exit 0
-######### END MAIN function #########
-
 config() {
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
@@ -573,3 +554,22 @@ loadconfdir () {
   # populates includes.conf with files in smb.conf.d directory
   find "${DIR_SAMBA_CONF}" -maxdepth 1 | sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
+
+#Todo:
+# ID_Map replication: https://wiki.samba.org/index.php/Joining_a_Samba_DC_to_an_Existing_Active_Directory#Built-in_User_.26_Group_ID_Mappings
+# SYSVOL replication:
+# Add the following line to allow a subnet to receive time service and query server statistics:  https://support.ntp.org/bin/view/Support/AccessRestrictions#Section_6.5.1.1.3.
+# time sync as client (beim join)
+
+######### BEGIN MAIN function #########
+config
+# If the supervisor conf isn't there, we're spinning up a new container
+if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
+  cp "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
+  appStart
+else
+  appSetup
+fi
+
+exit 0
+######### END MAIN function #########
