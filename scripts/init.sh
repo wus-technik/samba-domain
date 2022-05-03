@@ -123,6 +123,32 @@ config () {
 appSetup () {
   # Get config parameters - moved for easier reading
   config
+  
+  #NTP Settings
+  if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
+    touch /var/lib/ntp/ntp.drift
+	chown ntp:ntp /var/lib/ntp/ntp.drift
+  fi
+  if grep "{{ NTPSERVER }}" "$FILE_NTP"; then
+    DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
+    NTPSERVER=""
+    NTPSERVERRESTRICT=""
+    for DC in $DCs
+    do
+      NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
+      NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
+    done
+
+    sed -i -e "s:{{ NTPSERVER }}:$NTPSERVER::" "$FILE_NTP"
+    sed -i -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" "$FILE_NTP"
+
+  fi
+  if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
+    # Own socket
+    mkdir -p /var/lib/samba/ntp_signd/
+    chown root:ntp /var/lib/samba/ntp_signd/
+    chmod 750 /var/lib/samba/ntp_signd/
+  fi
 
   sed -e "s:{{ UDOMAIN }}:$UDOMAIN:" \
     -e "s:{{ LDOMAIN }}:$LDOMAIN:" \
@@ -449,30 +475,6 @@ appSetup () {
     " "${FILE_SAMBA_CONF}"
   fi
 
-  #NTP Settings
-#  if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
-#    touch /var/lib/ntp/ntp.drift
-#  fi
-  if grep "{{ NTPSERVER }}" etc/ntp.conf; then
-    DCs=$(echo "$NTPSERVERLIST" | tr " " "\n")
-    NTPSERVER=""
-    NTPSERVERRESTRICT=""
-    for DC in $DCs
-    do
-      NTPSERVER="$NTPSERVER server ${DC}    iburst prefer\n"
-      NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
-    done
-
-    sed -i -e "s:{{ NTPSERVER }}:$NTPSERVER:" "$FILE_NTP"
-    sed -i -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" "$FILE_NTP"
-
-  fi
-  if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
-    # Own socket
-    mkdir -p /var/lib/samba/ntp_signd/
-    chown root:ntp /var/lib/samba/ntp_signd/
-    chmod 750 /var/lib/samba/ntp_signd/
-  fi
 # Not needed on Samba 4.15 with ubuntu:devel
 #  if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
 #    mkdir /var/lib/samba/winbindd_privileged/
