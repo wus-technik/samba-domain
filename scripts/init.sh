@@ -7,7 +7,21 @@ set -x
 # SYSVOL replication:
 # Add the following line to allow a subnet to receive time service and query server statistics:  https://support.ntp.org/bin/view/Support/AccessRestrictions#Section_6.5.1.1.3.
 # time sync as client (beim join)
-config () {
+
+######### BEGIN MAIN function #########
+config
+# If the supervisor conf isn't there, we're spinning up a new container
+if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
+  cp "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
+  appStart
+else
+  appSetup
+fi
+
+exit 0
+######### END MAIN function #########
+
+config() {
   # Set variables
   DOMAIN=${DOMAIN:-SAMDOM.LOCAL}
   LDOMAIN=${DOMAIN,,} #alllowercase
@@ -121,9 +135,6 @@ config () {
 }
 
 appSetup () {
-  # Get config parameters - moved for easier reading
-  config
-  
   #NTP Settings - Instead of just touch the file write a float to the file to get rid of "format error frequency file /var/lib/ntp/ntp.drift" error message
   if [[ ! -f /var/lib/ntp/ntp.drift ]]; then
     echo 0.0 > /etc/ntp/drift
@@ -544,7 +555,6 @@ appFirstStart () {
 appStart () {
   update-ca-certificates
   loadconfdir
-  config
   /usr/bin/supervisord -c "${FILE_SUPERVISORD_CONF}"
 }
 
@@ -563,13 +573,3 @@ loadconfdir () {
   # populates includes.conf with files in smb.conf.d directory
   find "${DIR_SAMBA_CONF}" -maxdepth 1 | sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
-
-# If the supervisor conf isn't there, we're spinning up a new container
-if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
-  cp "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-  appStart
-else
-  appSetup
-fi
-
-exit 0
