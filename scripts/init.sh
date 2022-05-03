@@ -51,6 +51,7 @@ config() {
   ENABLE_MSCHAPV2=${ENABLE_MSCHAPV2:-false}
   ENABLE_RFC2307=${ENABLE_RFC2307:-true}
   ENABLE_WINS=${ENABLE_WINS:-true}
+  ENABLE_INSECURE_DNSUPDATE=${ENABLE_INSECURE_DNSUPDATE:-true}
 
   ENABLE_TLS=${ENABLE_TLS:-false}
   TLS_PKI=${TLS_PKI:-false}
@@ -468,6 +469,13 @@ appSetup () {
       \\t#tls crlfile   = tls/crl.pem\\n\
       \\t#tls verify peer = ca_and_name\
     " "${FILE_SAMBA_CONF}"
+  fi
+
+  if [ "${ENABLE_INSECURE_DNSUPDATE,,}" = true ]; then
+    sed -i "/\[global\]/a \
+      \\\tallow dns updates  = nonsecure\
+    " "${FILE_SAMBA_CONF}"
+  fi
   fi
 
 # Not needed on Samba 4.15 with ubuntu:devel
