@@ -18,7 +18,7 @@ do
 #      samba-tool drs replicate "$dc" "$HOSTNAME" "CN=Schema,CN=Configuration$LDAP_SUFFIX"
 #	fi
 #  done
-#  IFS=''
+#  IFS=' '
 #TESTING END
   echo "changing Kerberos Ticket Granting Ticket (TGT) password"
   if python3 /"${DIR_SCRIPTS}"/chgkrbtgtpass-v4-15-stable.py | tee /var/log/chgkrbtgtpass.log; then

@@ -33,7 +33,7 @@ config () {
   for dn in ${LDOMAIN}; do
     LDAP_SUFFIX="${LDAP_SUFFIX},DC=$dn"
   done
-  IFS=''
+  IFS=' '
   LDAP_DN=$HOSTNAME$LDAP_SUFFIX
 
   JOIN=${JOIN:-false}
