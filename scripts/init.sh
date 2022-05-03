@@ -463,9 +463,9 @@ appSetup () {
       NTPSERVERRESTRICT="$NTPSERVERRESTRICT restrict ${DC} mask 255.255.255.255    nomodify notrap nopeer noquery\n"
     done
 
-    sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" \
-      -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" \
-      -i "$FILE_NTP"
+    sed -i -e "s:{{ NTPSERVER }}:$NTPSERVER:" "$FILE_NTP"
+    sed -i -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" "$FILE_NTP"
+
   fi
   if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
     # Own socket
@@ -515,7 +515,7 @@ appFirstStart () {
     # Better check if net rpc is rdy
     sleep 300s
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
-    net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
+    echo "${DOMAIN_PASS}" | net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
   else
     if [ -f "$FILE_SAMBA_WINSLDB" ] && [ "${ENABLE_WINS}" = true ];then
       sed -e "s: {{DC_IP}}:$LDAP_SUFFIX:g" \
