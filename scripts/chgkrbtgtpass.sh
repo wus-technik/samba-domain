@@ -32,7 +32,7 @@ do
   date1="$(date +"%a, %d %b %Y %H:%M:%S %Z")"
   lastset="$(pdbedit -Lv krbtgt | grep "Password last set:")"
   date2="$(echo "$lastset" | cut -d ':' -f2):$(echo "$lastset" | cut -d ':' -f3):$(echo "$lastset" | cut -d ':' -f4)"
-  
+  date2=$(echo $date2 | sed 's/^ *//g')
   echo "Verifying that KRBTGT password has been updated"
   echo "Current date and time"
   echo "$date1"
