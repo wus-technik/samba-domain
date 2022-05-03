@@ -38,26 +38,26 @@ from samba.upgradehelpers import (get_paths,
                                   get_ldbs,
                                  update_krbtgt_account_password)
 
-PARSER = optparse.OptionParser("chgkrbtgtpass [options]")
-SAMBAOPTS = options.SambaOptions(PARSER)
-PARSER.add_option_group(SAMBAOPTS)
-PARSER.add_option_group(options.VersionOptions(PARSER))
-CREDOPTS = options.CredentialsOptions(PARSER)
-PARSER.add_option_group(CREDOPTS)
+parser = optparse.OptionParser("chgkrbtgtpass [options]")
+sambaopts = options.SambaOptions(parser)
+parser.add_option_group(sambaopts)
+parser.add_option_group(options.VersionOptions(parser))
+credopts = options.CredentialsOptions(parser)
+parser.add_option_group(credopts)
 
-OPTS = PARSER.parse_args()[0]
+opts = parser.parse_args()[0]
 
-LP = SAMBAOPTS.get_loadparm()
-SMBCONF = LP.configfile
-CREDS = CREDOPTS.get_credentials(LP)
-CREDS.set_kerberos_state(DONT_USE_KERBEROS)
+lp = sambaopts.get_loadparm()
+smbconf = lp.configfile
+creds = credopts.get_credentials(lp)
+creds.set_kerberos_state(DONT_USE_KERBEROS)
 
 
-PATHS = get_paths(param, SMBCONF=SMBCONF)
-SESSION = system_session()
+paths = get_paths(param, smbconf=smbconf)
+session = system_session()
 
-LDBS = get_ldbs(PATHS, CREDS, SESSION, LP)
-LDBS.startTransactions()
+ldbs = get_ldbs(paths, creds, session, lp)
+ldbs.startTransactions()
 
-update_krbtgt_account_password(LDBS.sam)
-LDBS.groupedCommit()
+update_krbtgt_account_password(ldbs.sam)
+ldbs.groupedCommit()
