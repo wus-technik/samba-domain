@@ -58,6 +58,8 @@ config() {
   PKI_OU=${PKI_OU:-Samba}
   PKI_CN=${PKI_CN:-Simple Samba Root CA}
 
+  # ntpd[740]: select(): nfound=-1, error: Interrupted system call => ignore on DEBUG_LEVEL=99
+
   ENABLE_DEBUG=${ENABLE_DEBUG:-true}
   DEBUG_LEVEL=${DEBUG_LEVEL:-0}
 
@@ -510,6 +512,8 @@ appFirstStart () {
   if [ "${JOIN,,}" = false ];then
     # Better check if net rpc is rdy
     sleep 300s
+	echo "Check NTP"
+	ntpinfo=$(ntpq -c sysinfo)
     #You want to set SeDiskOperatorPrivilege on your member server to manage your share permissions:
     echo "${DOMAIN_PASS}" | net rpc rights grant "$UDOMAIN\\Domain Admins" 'SeDiskOperatorPrivilege' -U"$UDOMAIN\\${DOMAIN_USER,,}" ${DEBUG_OPTION}
   else
