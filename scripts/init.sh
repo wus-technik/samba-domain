@@ -476,7 +476,6 @@ appSetup () {
       \\\tallow dns updates  = nonsecure\
     " "${FILE_SAMBA_CONF}"
   fi
-  fi
 
 # Not needed on Samba 4.15 with ubuntu:devel
 #  if [[ ! -d /var/lib/samba/winbindd_privileged/ ]]; then
