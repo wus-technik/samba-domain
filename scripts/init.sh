@@ -563,8 +563,8 @@ loadconfdir () {
   # create directory smb.conf.d to store samba .conf files
   mkdir -p "$DIR_SAMBA_CONF"
 
-  # populates includes.conf with files in smb.conf.d directory
-  find "${DIR_SAMBA_CONF}" -maxdepth 1 | sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
+  # populates includes.conf with files (type -f) in smb.conf.d directory
+  find "${DIR_SAMBA_CONF}" -maxdepth 1 -type f| sed -e 's/^/include = /' > "$FILE_SAMBA_INCLUDES"
 }
 
 #Todo:
