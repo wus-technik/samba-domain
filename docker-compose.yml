@@ -160,3 +160,7 @@ services:
       - WORKGROUP=WORKGROUP
     network_mode: "host"
     privileged: true
+    healthcheck:
+      interval: "30s"
+      timeout: "10s"
+      test: pgrep -x "/usr/sbin/wsdd2" || exit 1
