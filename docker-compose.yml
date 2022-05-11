@@ -11,9 +11,6 @@ networks:
       com.docker.network.bridge.name: br_samba
 
 services:
-
-# ----------- samba begin ----------- #
-
   samba:
     build: .
     container_name: samba-dc01
@@ -67,7 +64,6 @@ services:
 #      - 464:464
 #      - 464:464/udp
 #      - 636:636
-##      - 1024-1044:1024-1044
 #      - 3268-3269:3268-3269
 #      - 49152-49170:49152-49170
     dns_search:
@@ -152,4 +148,15 @@ services:
 #      - SYS_TIME
 #    devices:
 #      - /dev/net/tun
+    privileged: true
+
+# git clone https://github.com/Netgear/wsdd2
+  wsdd2:
+    build:
+      context: ./wsdd2
+    container_name: wsdd2
+    environment:
+      - HOSTNAME=blabla
+      - WORKGROUP=WORKGROUP
+    network_mode: "host"
     privileged: true
