@@ -104,9 +104,11 @@ config() {
   FILE_SAMBA_SCHEMA_WINSREPL=$DIR_LDIF/wins.ldif
   
   FILE_SUPERVISORD_CUSTOM_CONF=/etc/supervisor/conf.d/supervisord.conf
+  FILE_SUPERVISORD_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/supervisord.conf
   FILE_SUPERVISORD_CONF=/etc/supervisor/supervisord.conf
   FILE_OPENVPNCONF=/docker.ovpn
   FILE_KRB5=/etc/krb5.conf
+  FILE_KRB5_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/krb5.conf
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
   FILE_NTP=/etc/ntp.conf
@@ -139,7 +141,6 @@ appSetup () {
     sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
     sed -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" -i "$FILE_NTP"
     IFS=''
-	cp "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
   fi
   if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
     # Own socket
@@ -433,8 +434,14 @@ appSetup () {
 
     # Once we are set up, we'll make a file so that we know to use it if we ever spin this up again
     cp -f "${FILE_SAMBA_CONF}" "${FILE_SAMBA_CONF_EXTERNAL}"
+	cp -f "${FILE_SUPERVISORD_CUSTOM_CONF}" "${FILE_SUPERVISORD_CONF_EXTERNAL}"
+    cp -f "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
+	cp -f "${FILE_KRB5}" "${FILE_KRB5_CONF_EXTERNAL}"
   else
     cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
+	cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+    cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
+	cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
   fi
 
   # Stop VPN & write supervisor service
@@ -579,8 +586,10 @@ loadconfdir () {
 config
 # If the supervisor conf isn't there, we're spinning up a new container
 if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
-  cp "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
-  cp "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
+  cp -f "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
+  cp -f "${FILE_SUPERVISORD_CONF_EXTERNAL}" "${FILE_SUPERVISORD_CUSTOM_CONF}"
+  cp -f "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
+  cp -f "${FILE_KRB5_CONF_EXTERNAL}" "${FILE_KRB5}"
   appStart
 else
   appSetup
