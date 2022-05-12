@@ -26,8 +26,10 @@ A well documented, tried and tested Samba Active Directory Domain Controller tha
 | `DISABLE_MD5`               | true                                          |       | Disable MD5 Clients and Server  |
 | `DISABLE_PW_COMPLEXITY`     | false                                         |   X   | Disable Password requirements  |
 | `ENABLE_CUPS`               | false                                         |       | Enable CUPS - cups is not installed but setup in smb.conf modify Dockerfile  |
+| `ENABLE_DNSFORWARDER`       | <IP-of-dns-server>                            |       | Ip of upstream dns server  |
 | `ENABLE_DYNAMIC_PORTRANGE`  | NONE                                          |       | If samba is behind a reverse proxy on some small systems the ports need to be limited  |
 | `ENABLE_INSECURE_LDAP`      | false                                         |       | Enable insecure ldap connections  |
+| `ENABLE_INSECURE_DNSUPDATE` | false                                         |       | Enable insecure dns updates (no packet signing)  |
 | `ENABLE_LAPS_SCHEMA`        | true                                          |   X   | Setup Local Administrator Password Solution  |
 | `ENABLE_LOGS`               | false                                         |       | Enable log files - disabled. log to stdout and ship docker logs |
 | `ENABLE_MSCHAPV2`           | false                                         |       | Enable MSCHAP authentication  |

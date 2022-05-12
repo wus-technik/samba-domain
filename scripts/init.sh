@@ -110,6 +110,7 @@ config() {
   FILE_NSSWITCH=/etc/nsswitch.conf
   FILE_SAMLDB=$DIR_SAMBA_PRIVATE/sam.ldb
   FILE_NTP=/etc/ntp.conf
+  FILE_NTP_CONF_EXTERNAL=$DIR_SAMBA_ETC/external/ntp.conf
 
   # exports for other scripts and TLS_PKI
   export HOSTNAME="$HOSTNAME"
@@ -136,8 +137,9 @@ appSetup () {
     done
 
     sed -e "s:{{ NTPSERVER }}:$NTPSERVER:" -i "$FILE_NTP"
-    sed -i "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" "$FILE_NTP"
+    sed -e "s:{{ NTPSERVERRESTRICT }}:$NTPSERVERRESTRICT:" -i "$FILE_NTP"
     IFS=''
+	cp "${FILE_NTP}" "${FILE_NTP_CONF_EXTERNAL}"
   fi
   if [[ ! -f /var/lib/samba/ntp_signd/ ]]; then
     # Own socket
@@ -578,6 +580,7 @@ config
 # If the supervisor conf isn't there, we're spinning up a new container
 if [[ -f "${FILE_SAMBA_CONF_EXTERNAL}" ]]; then
   cp "${FILE_SAMBA_CONF_EXTERNAL}" "${FILE_SAMBA_CONF}"
+  cp "${FILE_NTP_CONF_EXTERNAL}" "${FILE_NTP}"
   appStart
 else
   appSetup
