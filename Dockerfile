@@ -1,4 +1,4 @@
-FROM ubuntu:devel
+FROM ubuntu:focal
 
 LABEL maintainer="Fmstrat <fmstrat@NOSPAM.NO>"
 
@@ -66,8 +66,8 @@ EXPOSE 3268/tcp
 EXPOSE 3269/tcp
 
 # Dynamic RPC Ports # LIMITED TO 18 CONNECTIONS FOR SMALL ARM PROXY DEVICES
-# EXPOSE 49152-65535/tcp
-EXPOSE 49152-49170/tcp
+EXPOSE 49152-65535/tcp
+# EXPOSE 49152-49170/tcp
 
 WORKDIR /
 
